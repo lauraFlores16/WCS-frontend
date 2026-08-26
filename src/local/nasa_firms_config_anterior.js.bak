@@ -1,0 +1,38 @@
+// ============================================================================
+//  CONFIGURACIÓN DE LA API KEY DE NASA FIRMS
+// ============================================================================
+//
+//  >>> AQUÍ VA TU API KEY <<<
+//
+//  Reemplaza el texto "PON_AQUI_TU_API_KEY" por tu clave real de NASA FIRMS.
+//  La obtienes gratis en:  https://firms.modaps.eosdis.nasa.gov/api/map_key/
+//
+//  Ejemplo:
+//     export const NASA_FIRMS_MAP_KEY = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6";
+//
+//  NOTA DE SEGURIDAD: como este es un prototipo que corre 100% en el navegador,
+//  la clave queda visible en el código del frontend. La API key de FIRMS es de
+//  tipo "MAP_KEY" (solo lectura de focos, con límite de peticiones), así que el
+//  riesgo es bajo. Para producción, lo correcto sería que el backend haga la
+//  petición y guarde la clave en el servidor — pero para la demo local esto sirve.
+// ============================================================================
+
+export const NASA_FIRMS_MAP_KEY = "PON_AQUI_TU_API_KEY";
+
+// Sensores/fuentes de FIRMS que se consultan. VIIRS es más preciso (375 m).
+// Puedes cambiar la fuente si lo necesitas:
+//   - VIIRS_SNPP_NRT   (Suomi-NPP, tiempo casi real)
+//   - VIIRS_NOAA20_NRT (NOAA-20)
+//   - VIIRS_NOAA21_NRT (NOAA-21)
+//   - MODIS_NRT        (MODIS, 1 km)
+export const NASA_FIRMS_FUENTE = "VIIRS_SNPP_NRT";
+
+// Cuántos días hacia atrás traer focos. El rango válido depende del tipo de
+// clave; la de este proyecto acepta de 1 a 5 días. (Si tu clave permitiera
+// más, podrías subirlo; si pones un valor fuera de rango, FIRMS responde 400.)
+export const NASA_FIRMS_DIAS = 5;
+
+// ¿La clave ya fue configurada? (se usa para mostrar un aviso amable si no)
+export function apiKeyConfigurada() {
+  return NASA_FIRMS_MAP_KEY && NASA_FIRMS_MAP_KEY !== "PON_AQUI_TU_API_KEY";
+}

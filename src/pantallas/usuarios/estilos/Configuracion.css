@@ -1,0 +1,175 @@
+/* ===========================================================================
+   CONFIGURACIÓN DEL SISTEMA  ·  pantallas/usuarios/Configuracion.jsx
+   ---------------------------------------------------------------------------
+   Antes esta pantalla compartía hoja con Gestión de usuarios (`config-grid`,
+   `config-card`…). Se separa porque ya no es la misma vista: lee del servidor,
+   tiene secciones desplegables y una rejilla que se adapta al contenido.
+   =========================================================================== */
+
+.config-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+/* «Fuentes externas» era `grid-column: 1 / -1`. Con ocho tarjetas y tres
+   columnas, esa última a todo lo ancho dejaba a «Autómata celular» sola en su
+   fila y un hueco de dos columnas al lado. Como tarjeta normal las ocho fluyen
+   3 + 3 + 2 y no queda ese vacío. */
+.config-ancha { grid-column: auto; }
+
+/* --- Fila etiqueta / valor ----------------------------------------------- */
+.config-fila {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--border-subtle);
+  font-size: 13px;
+}
+.config-fila:last-of-type { border-bottom: none; }
+
+.config-label {
+  flex: none;
+  color: var(--text-muted);
+  font-size: 12.5px;
+}
+
+.config-valor {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  text-align: right;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+.config-valor.es-ok { color: var(--riesgo-bajo); }
+.config-valor.es-aviso { color: var(--alerta-naranja); }
+
+.config-nota-inline {
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+/* --- Punto de estado -----------------------------------------------------
+   Va SIEMPRE con texto al lado («Configurada», «no responde»): el color por
+   sí solo no es una señal accesible.                                        */
+.config-punto {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  align-self: center;
+  background: var(--text-muted);
+}
+.config-punto.es-ok { background: var(--riesgo-bajo); }
+.config-punto.es-caido { background: var(--alerta-naranja); }
+
+/* --- Nota al pie de una sección ------------------------------------------ */
+.config-nota {
+  margin: 12px 0 0;
+  padding-top: 11px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 12px;
+  line-height: 1.62;
+  color: var(--text-muted);
+}
+.config-nota strong { color: var(--text-secondary); }
+
+/* --- Eventos históricos --------------------------------------------------- */
+.config-eventos {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+.config-evento {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-void);
+  font-size: 12.5px;
+}
+.config-evento-anio { color: var(--acento-500); font-weight: 600; flex: none; }
+.config-evento-nombre { flex: 1; min-width: 0; color: var(--text-secondary); }
+.config-evento-cifra { flex: none; color: var(--text-muted); font-size: 11.5px; }
+
+/* --- Constantes del autómata (plegadas) ---------------------------------- */
+.config-detalles {
+  margin-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 11px;
+}
+.config-detalles summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  list-style: none;
+}
+.config-detalles summary::-webkit-details-marker { display: none; }
+.config-detalles summary::before {
+  content: "▸ ";
+  color: var(--text-muted);
+}
+.config-detalles[open] summary::before { content: "▾ "; }
+.config-detalles summary:hover { color: var(--acento-500); }
+
+.config-constantes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 2px 14px;
+  margin-top: 10px;
+}
+.config-constante {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+.config-constante span:last-child { color: var(--text-secondary); }
+
+/* --- Colas de peticiones salientes --------------------------------------- */
+.config-colas {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 14px;
+}
+.config-cola {
+  display: flex;
+  align-items: center;
+  /* El estado de la cola es una frase larga («disponible · 4/120 peticiones en
+     el último minuto») y la tarjeta mide 330 px: se envuelve siempre, no solo
+     en móvil, para no forzar scroll horizontal dentro del panel. */
+  flex-wrap: wrap;
+  gap: 4px 9px;
+  padding: 8px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-void);
+  font-size: 12.5px;
+}
+.config-cola-host { flex: none; color: var(--text-primary); }
+.config-cola-estado { flex: 1; min-width: 0; color: var(--text-muted); }
+
+/* --- Pie ------------------------------------------------------------------ */
+.config-creditos {
+  margin: 6px 0 0;
+  text-align: center;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+@media (max-width: 720px) {
+  .config-fila { flex-direction: column; align-items: flex-start; gap: 3px; }
+  .config-valor { text-align: left; }
+  .config-cola { flex-wrap: wrap; }
+}

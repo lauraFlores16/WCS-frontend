@@ -1,0 +1,189 @@
+// P1 Carga Espacial + P2 Variables GEE
+// Muestra el inventario de datos satelitales reales cargados en el sistema:
+// grid de 36,390 celdas, variables GEE (NDVI, LST, humedad, viento, precipitación)
+// y focos históricos NASA FIRMS por evento (2021, 2023, 2024).
+// Todo viene de los archivos CSV reales: public/datos/grid.csv y focos.csv
+import { useEffect, useState } from "react";
+import { cargarGrid, cargarFocos } from "../../local/datos";
+import "./estilos/DatosEspaciales.css";
+
+export default function DatosEspaciales() {
+  const [stats, setStats] = useState(null);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    Promise.all([cargarGrid(), cargarFocos()]).then(([grid, focos]) => {
+      const ndvis = grid.map((c) => c.ndvi).filter((v) => v != null && !isNaN(v));
+      const humedad = grid.map((c) => c.humedad).filter((v) => v != null && !isNaN(v));
+      const prob = grid.map((c) => c.prob_ignicion).filter((v) => v != null && !isNaN(v));
+      const focos2021 = focos.filter((f) => String(f.evento) === "2021").length;
+      const focos2023 = focos.filter((f) => String(f.evento) === "2023").length;
+      const focos2024 = focos.filter((f) => String(f.evento) === "2024").length;
+
+      setStats({
+        totalCeldas: grid.length,
+        areaTotalHa: grid.length * 25,
+        ndviMin: Math.min(...ndvis).toFixed(3),
+        ndviMax: Math.max(...ndvis).toFixed(3),
+        ndviMedia: (ndvis.reduce((a, b) => a + b, 0) / ndvis.length).toFixed(3),
+        humedadMin: Math.min(...humedad).toFixed(2),
+        humedadMax: Math.max(...humedad).toFixed(2),
+        probMedia: (prob.reduce((a, b) => a + b, 0) / prob.length).toFixed(3),
+        probMax: Math.max(...prob).toFixed(4),
+        totalFocos: focos.length,
+        focos2021, focos2023, focos2024,
+      });
+      setCargando(false);
+    });
+  }, []);
+
+  if (cargando) {
+    return (
+      <div className="page">
+        <div className="page-header">
+          <div><h1 className="page-title">Datos espaciales</h1></div>
+        </div>
+        <p className="text-muted">Cargando datos reales desde los CSVs…</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Datos espaciales y variables GEE</h1>
+          <p className="page-subtitle">
+            Inventario de los datos satelitales que alimentan la simulación — todos cargados desde tus CSVs reales
+          </p>
+        </div>
+      </div>
+
+      <div className="datos-grid">
+
+        {/* P1: Grid espacial */}
+        <div className="panel datos-tarjeta">
+          <div className="datos-tarjeta-modulo">P1 — Carga Espacial</div>
+          <div className="datos-tarjeta-titulo">Grid de celdas — Apolo, La Paz</div>
+          <div className="datos-kpi">{stats.totalCeldas.toLocaleString()}</div>
+          <div className="datos-kpi-sub">celdas de 500 × 500 m (grilla UTM WGS-84)</div>
+          <div className="datos-kpi" style={{ marginTop: 14 }}>
+            {(stats.areaTotalHa / 10000).toFixed(0)} km²
+          </div>
+          <div className="datos-kpi-sub">área total cubierta ({stats.areaTotalHa.toLocaleString()} ha)</div>
+          <div className="datos-fuentes">
+            <span className="datos-fuente-badge"><span className="datos-fuente-punto" />NASA FIRMS (MODIS/VIIRS) — focos de calor</span>
+            <span className="datos-fuente-badge"><span className="datos-fuente-punto" />SRTM — DEM 30 m (elevación/pendiente)</span>
+            <span className="datos-fuente-badge"><span className="datos-fuente-punto" />Google Earth Engine — extracción y grilla</span>
+          </div>
+        </div>
+
+        {/* P2: Variables GEE */}
+        <div className="panel datos-tarjeta">
+          <div className="datos-tarjeta-modulo">P2 — Variables GEE</div>
+          <div className="datos-tarjeta-titulo">Variables ambientales por celda</div>
+          <div className="datos-variables-lista">
+            <div className="datos-var-fila">
+              <span>NDVI (vegetación) — Landsat 8</span>
+              <span className="datos-var-rango">{stats.ndviMin} – {stats.ndviMax}</span>
+            </div>
+            <div className="datos-var-fila">
+              <span>NDVI promedio</span>
+              <span className="datos-var-rango">{stats.ndviMedia}</span>
+            </div>
+            <div className="datos-var-fila">
+              <span>Humedad relativa — ERA5</span>
+              <span className="datos-var-rango">{stats.humedadMin} – {stats.humedadMax}</span>
+            </div>
+            <div className="datos-var-fila">
+              <span>LST (temperatura sup.) — MODIS</span>
+              <span className="datos-var-rango">por celda</span>
+            </div>
+            <div className="datos-var-fila">
+              <span>Viento u/v — ERA5</span>
+              <span className="datos-var-rango">por celda</span>
+            </div>
+            <div className="datos-var-fila">
+              <span>Precipitación — ERA5</span>
+              <span className="datos-var-rango">por celda</span>
+            </div>
+          </div>
+          <div className="datos-fuentes" style={{ marginTop: 14 }}>
+            <span className="datos-fuente-badge"><span className="datos-fuente-punto" />Landsat 8 — NDVI</span>
+            <span className="datos-fuente-badge"><span className="datos-fuente-punto" />MODIS — LST</span>
+            <span className="datos-fuente-badge"><span className="datos-fuente-punto" />ERA5 — humedad · viento · precipitación</span>
+          </div>
+        </div>
+
+        {/* P3: XGBoost — probabilidad */}
+        <div className="panel datos-tarjeta">
+          <div className="datos-tarjeta-modulo">P3 — Modelo XGBoost V3</div>
+          <div className="datos-tarjeta-titulo">Probabilidad de ignición precalculada</div>
+          <div className="datos-kpi">{stats.probMedia}</div>
+          <div className="datos-kpi-sub">probabilidad media por celda (AUC-ROC: 0.9214)</div>
+          <div className="datos-kpi" style={{ marginTop: 14, color: "var(--alerta-roja)" }}>
+            {stats.probMax}
+          </div>
+          <div className="datos-kpi-sub">máxima (celda foco sugerida fila=83, col=126)</div>
+          <div className="datos-fuentes" style={{ marginTop: 14 }}>
+            <span className="datos-fuente-badge"><span className="datos-fuente-punto" />8 features: NDVI, LST, elevación, pendiente, humedad, precipitación, viento, temperatura</span>
+            <span className="datos-fuente-badge"><span className="datos-fuente-punto" />Validado contra eventos reales 2021, 2023, 2024</span>
+          </div>
+        </div>
+
+        {/* Focos históricos FIRMS */}
+        <div className="panel datos-tarjeta">
+          <div className="datos-tarjeta-modulo">P1 — Focos históricos NASA FIRMS</div>
+          <div className="datos-tarjeta-titulo">Puntos de calor reales — Apolo</div>
+          <table className="datos-focos-tabla">
+            <thead>
+              <tr><th>Evento</th><th>Focos detectados</th><th>Sensor</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Temporada 2021</td>
+                <td className="mono">{stats.focos2021.toLocaleString()}</td>
+                <td className="text-muted">MODIS/VIIRS</td>
+              </tr>
+              <tr>
+                <td>Temporada 2023</td>
+                <td className="mono" style={{ color: "var(--alerta-naranja)" }}>{stats.focos2023.toLocaleString()}</td>
+                <td className="text-muted">MODIS/VIIRS</td>
+              </tr>
+              <tr>
+                <td>Temporada 2024</td>
+                <td className="mono">{stats.focos2024.toLocaleString()}</td>
+                <td className="text-muted">MODIS/VIIRS</td>
+              </tr>
+              <tr style={{ fontWeight: 600 }}>
+                <td>Total</td>
+                <td className="mono">{stats.totalFocos.toLocaleString()}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+          <div className="datos-estado-carga" style={{ marginTop: 14 }}>
+            <span className="datos-estado-punto" style={{ background: "var(--estado-no-quemada)" }} />
+            <span className="text-muted">Filtrado a municipio de Franz Tamayo (Apolo) — cargado en <span className="mono">public/datos/focos.csv</span></span>
+          </div>
+        </div>
+
+      </div>
+
+      <div className="panel" style={{ padding: "18px 22px" }}>
+        <p className="text-secondary" style={{ fontSize: 13, lineHeight: 1.7 }}>
+          <strong style={{ color: "var(--text-primary)" }}>Flujo de datos en el prototipo:</strong>{" "}
+          Los módulos P1 y P2 ya están completados — sus resultados viven en{" "}
+          <span className="mono">public/datos/grid.csv</span> (36,390 celdas con NDVI real, variables ERA5 reales y
+          probabilidad XGBoost precalculada) y <span className="mono">public/datos/focos.csv</span>.
+          El módulo P3 (XGBoost) usa la columna <span className="mono">prob_ignicion</span> de ese CSV — calculada
+          por tu modelo real <span className="mono">xgboost_v3.json</span> con AUC-ROC 0.9214.
+          El módulo P4 (autómata celular) corre en el navegador al ejecutar una simulación desde Panel de control,
+          usando las variables del mismo CSV como inputs. El módulo P5 recibe los parámetros del Panel de control
+          y desencadena P4. El módulo P6 evalúa las alertas iteración a iteración.
+          Ve a <strong style={{ color: "var(--text-primary)" }}>P5 — Panel de control</strong> para ejecutar una simulación.
+        </p>
+      </div>
+    </div>
+  );
+}

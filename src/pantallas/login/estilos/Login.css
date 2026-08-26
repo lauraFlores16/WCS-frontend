@@ -1,0 +1,408 @@
+/* =========================================================
+   LOGIN — SISPROP
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   PÁGINA PRINCIPAL
+   --------------------------------------------------------- */
+
+.login-pagina {
+  min-height: 100vh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 20px;
+
+  /*
+   * banner.png queda como imagen principal de fondo.
+   * Los degradados se colocan encima para oscurecerla
+   * y mantener la identidad visual de SISPROP.
+   */
+  background:
+    radial-gradient(
+      1000px 700px at 20% 10%,
+      rgba(237, 238, 238, 0) 0%,
+      transparent 100%
+    ),
+    radial-gradient(
+      900px 600px at 90% 90%,
+      rgba(203, 214, 224, 0.04) 0%,
+      transparent 100%
+    ),
+    linear-gradient(
+      160deg,
+      rgba(240, 243, 242, 0.111) 0%,
+      rgba(246, 246, 246, 0.247) 100%
+    ),
+    url("/banner.png");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  position: relative;
+}
+
+/* ---------------------------------------------------------
+   CAJA PRINCIPAL
+   --------------------------------------------------------- */
+
+.login-caja {
+  width: 100%;
+  max-width: 400px;
+
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------------------------------------------------------
+   ENCABEZADO
+   --------------------------------------------------------- */
+
+.login-encabezado {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.login-simbolo {
+  width: 72px;
+  height: auto;
+
+  object-fit: contain;
+
+  margin: 0 auto 14px;
+  display: block;
+
+  filter: drop-shadow(
+    0 4px 16px rgba(47, 175, 166, 0.3)
+  );
+}
+
+.login-logo {
+  width: 64px;
+  height: 64px;
+
+  object-fit: contain;
+
+  margin: 0 auto 16px;
+}
+
+.login-titulo {
+  font-family: var(--font-display);
+
+  font-size: 34px;
+  font-weight: 700;
+
+  letter-spacing: 0.03em;
+
+  margin-bottom: 8px;
+
+  background: var(--gradiente-marca);
+
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+}
+
+/* ---------------------------------------------------------
+   FORMULARIO
+   --------------------------------------------------------- */
+
+.login-form {
+  padding: 28px;
+}
+
+.login-campo {
+  margin-bottom: 16px;
+}
+
+.login-campo--password {
+  margin-bottom: 20px;
+}
+
+/* ---------------------------------------------------------
+   MENSAJE DE ERROR
+   --------------------------------------------------------- */
+
+.login-error {
+  display: flex;
+  align-items: flex-start;
+
+  gap: 8px;
+
+  background: var(--alerta-roja-tint);
+
+  color: var(--alerta-roja);
+
+  border: 1px solid color-mix(
+    in srgb,
+    var(--alerta-roja) 40%,
+    transparent
+  );
+
+  border-radius: var(--radius-md);
+
+  padding: 9px 12px;
+
+  font-size: 13px;
+  line-height: 1.5;
+
+  margin-bottom: 16px;
+}
+
+.login-error .icono {
+  flex: none;
+  margin-top: 1px;
+}
+
+/* =========================================================
+   CONTRASEÑA
+   ========================================================= */
+
+.login-password {
+  position: relative;
+
+  display: flex;
+  align-items: center;
+
+  width: 100%;
+}
+
+/* El input deja espacio para el botón del ojo */
+.login-password .input {
+  width: 100%;
+
+  padding-right: 48px;
+}
+
+/* ---------------------------------------------------------
+   BOTÓN MOSTRAR / OCULTAR CONTRASEÑA
+   --------------------------------------------------------- */
+
+.login-ojo {
+  position: absolute;
+
+  top: 50%;
+  right: 5px;
+
+  transform: translateY(-50%);
+
+  width: 34px;
+  height: 34px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+  margin: 0;
+
+  border: none;
+
+  border-radius: var(--radius-sm);
+
+  background: transparent;
+
+  color: var(--text-muted);
+
+  cursor: pointer;
+
+  transition:
+    color 0.15s ease,
+    background 0.15s ease,
+    transform 0.1s ease;
+}
+
+/* Hover */
+.login-ojo:hover {
+  color: var(--text-primary);
+
+  background: var(--bg-panel-hover);
+}
+
+/* Click */
+.login-ojo:active {
+  transform: translateY(-50%) scale(0.94);
+}
+
+/* Contraseña visible */
+.login-ojo[aria-pressed="true"] {
+  color: var(--acento-500);
+}
+
+/* Accesibilidad */
+.login-ojo:focus-visible {
+  outline: 2px solid var(--acento-500);
+
+  outline-offset: 1px;
+}
+
+/* SVG del ojo */
+.login-ojo svg {
+  display: block;
+
+  width: 18px;
+  height: 18px;
+
+  flex-shrink: 0;
+}
+
+/* =========================================================
+   BOTÓN INGRESAR
+   ========================================================= */
+
+.login-form .btn--primary {
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.login-form .btn--primary:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+.login-form .btn--primary:not(:disabled):active {
+  transform: translateY(0);
+}
+
+/* =========================================================
+   PIE DEL LOGIN
+   ========================================================= */
+
+.login-pie {
+  text-align: center;
+
+  font-size: 11px;
+
+  margin-top: 18px;
+}
+
+/* =========================================================
+   LOGO SIPRO COMPLETO
+   ========================================================= */
+
+.login-titulo {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  background: none;
+}
+
+.login-encabezado .text-muted {
+  color: #ffffff !important;
+}
+
+.login-form .field-label {
+  color: #ffffff;
+}
+
+.login-form .input {
+  color: #ffffff;
+}
+
+.login-form .input::placeholder {
+  color: rgba(255, 255, 255, 0.60);
+}
+
+.login-wcs-label {
+  color: #ffffff;
+}
+
+/* =========================================================
+   WCS
+   ========================================================= */
+
+.login-wcs {
+  margin-top: 18px;
+
+  padding-top: 16px;
+
+  border-top: 1px solid var(--border-subtle);
+
+  display: flex;
+
+  flex-direction: column;
+
+  align-items: center;
+
+  gap: 8px;
+}
+
+.login-wcs-label {
+  font-size: 10px;
+
+  color: var(--text-muted);
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.05em;
+}
+
+.login-wcs-logo {
+  max-width: 180px;
+
+  width: 100%;
+
+  height: auto;
+
+  background: #ffffff00;
+
+  padding: 8px 12px;
+
+  border-radius: 8px;
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 480px) {
+  .login-pagina {
+    padding: 16px;
+  }
+
+  .login-caja {
+    max-width: 100%;
+  }
+
+  .login-encabezado {
+    margin-bottom: 22px;
+  }
+
+  .login-simbolo {
+    width: 64px;
+  }
+
+  .login-titulo {
+    font-size: 30px;
+  }
+
+  .login-form {
+    padding: 22px;
+  }
+}
+
+/* =========================================================
+   PANTALLAS PEQUEÑAS EN ALTURA
+   ========================================================= */
+
+@media (max-height: 700px) {
+  .login-pagina {
+    align-items: flex-start;
+
+    padding-top: 30px;
+    padding-bottom: 30px;
+  }
+
+  .login-encabezado {
+    margin-bottom: 18px;
+  }
+
+  .login-simbolo {
+    width: 58px;
+
+    margin-bottom: 8px;
+  }
+}

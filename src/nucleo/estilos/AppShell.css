@@ -1,0 +1,677 @@
+/* ==========================================================================
+   ARMAZÓN DE LA APLICACIÓN
+   --------------------------------------------------------------------------
+   Barra superior delgada · menú lateral izquierdo colapsable · contenido.
+   El panel derecho deslizable lo monta cada pantalla (es contextual).
+
+   Regla de reparto: solo el CONTENIDO es elástico. El menú y el panel derecho
+   tienen anchos fijos, así que todo el espacio que sobra —y todo el que se
+   gana al plegar cualquiera de los dos— se lo queda el mapa.
+
+   Usa las variables de estilos/tokens.css: aquí no se define ningún color.
+   ========================================================================== */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+
+  --barra-h: 52px;
+  --menu-w: 60px;
+  --panel-der-w: 340px;
+}
+
+.shell.menu-abierto {
+  --menu-w: 232px;
+}
+
+.shell-cuerpo {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.shell-contenido {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Las pantallas GIS ocupan el alto exacto y gestionan su propio scroll:
+   nunca deben provocar scroll de página, porque el mapa se cortaría. */
+.shell-contenido.es-gis {
+  overflow: hidden;
+}
+
+/* ==========================================================================
+   BARRA SUPERIOR
+   ========================================================================== */
+.barra-superior {
+  height: var(--barra-h);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  z-index: 30;
+}
+
+.barra-marca {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+  width: calc(var(--menu-w) - 14px);
+  transition: width 0.18s ease;
+  overflow: hidden;
+}
+
+.barra-simbolo {
+  width: 26px;
+  height: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.barra-marca-nombre {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  background: var(--gradiente-marca);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  white-space: nowrap;
+}
+
+.barra-contexto {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.barra-titulo {
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.barra-subtitulo {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.barra-acciones {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-shrink: 0;
+}
+
+.barra-icono-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.barra-icono-btn:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+  border-color: var(--acento-500);
+}
+
+.barra-usuario {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+}
+.barra-usuario:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--acento-500);
+}
+
+.barra-avatar {
+  width: 25px;
+  height: 25px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--acento-500);
+  color: var(--text-inverse);
+  font-weight: 700;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.barra-usuario-texto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.barra-usuario-nombre {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.barra-usuario-rol {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+.barra-wcs {
+  margin-top: 8px;
+  padding: 10px 10px 4px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.barra-wcs-label {
+  font-size: 9px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.barra-wcs-logo {
+  width: 100%;
+  max-width: 150px;
+  height: auto;
+  /* El logo WCS es negro: sobre fondo oscuro necesita respaldo claro */
+  background: #fff;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+/* ==========================================================================
+   MENÚ LATERAL IZQUIERDO
+   ========================================================================== */
+.menu-lateral {
+  width: var(--menu-w);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border-right: 1px solid var(--border-subtle);
+  transition: width 0.18s ease;
+  overflow: hidden;
+}
+
+.menu-alternar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 44px;
+  margin: 8px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-display);
+  flex-shrink: 0;
+}
+.menu-alternar:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+.menu-alternar-texto {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.menu-grupos {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.menu-grupos::-webkit-scrollbar { width: 5px; }
+.menu-grupos::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+.menu-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-grupo-titulo {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  padding: 4px 10px 5px;
+  white-space: nowrap;
+}
+
+.menu-separador {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 5px 8px;
+}
+
+.menu-enlace {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  border-left: 2px solid transparent;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+.menu-enlace:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+.menu-enlace.activo {
+  background: var(--acento-tint);
+  color: var(--text-primary);
+  border-left-color: var(--acento-500);
+  font-weight: 600;
+}
+.menu-enlace.activo .menu-enlace-icono { color: var(--acento-400); }
+
+.menu-enlace-icono {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.menu-enlace-texto {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Rótulo flotante del menú cerrado (portal sobre <body>) */
+.menu-rotulo {
+  position: fixed;
+  transform: translateY(-50%);
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  z-index: 4000;
+  pointer-events: none;
+}
+
+.menu-pie {
+  flex-shrink: 0;
+  padding: 10px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  justify-content: center;
+}
+
+.menu-rol {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 2px 4px;
+}
+.menu-rol-etiqueta {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.menu-rol-valor {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--acento-400);
+  text-transform: capitalize;
+}
+.menu-rol-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acento-500);
+}
+
+/* ==========================================================================
+   PANEL LATERAL DERECHO — deslizable
+   ========================================================================== */
+.panel-deslizable {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-subtle);
+  transition: width 0.2s ease;
+}
+
+.panel-deslizable.abierto { width: var(--panel-der-w); }
+.panel-deslizable.cerrado { width: 38px; }
+
+/* Pestaña vertical cuando está cerrado */
+.panel-pestana {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+}
+.panel-pestana:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+.panel-pestana-texto {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.panel-cabecera {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 12px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.panel-cabecera-texto { min-width: 0; }
+
+.panel-titulo {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.panel-subtitulo {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+.panel-cerrar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.panel-cerrar:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+  border-color: var(--acento-500);
+}
+
+.panel-pestanas {
+  flex-shrink: 0;
+  display: flex;
+  gap: 3px;
+  padding: 8px 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* Con `white-space: nowrap` y `flex: 1` a secas, la CUARTA pestaña de
+   Monitoreo (Ubicación · Alertas · Simulación · Consola) se salía del panel de
+   340 px y su etiqueta quedaba cortada a media palabra. `min-width: 0` deja
+   que los botones se encojan de verdad —sin él, flex respeta el tamaño del
+   contenido y no reparte— y la etiqueta se recorta con puntos suspensivos en
+   vez de desbordarse. El icono no se encoge: es lo que queda legible cuando
+   el texto ya no cabe. */
+.panel-pestana-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 5px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.panel-pestana-btn .icono { flex: none; }
+.panel-pestana-btn > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.panel-pestana-btn:hover { color: var(--text-primary); }
+.panel-pestana-btn.activa {
+  color: var(--acento-400);
+  border-bottom-color: var(--acento-500);
+}
+
+.panel-cuerpo {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* El pie NO scrollea: aquí vive el botón de ejecutar la simulación */
+.panel-acciones {
+  flex-shrink: 0;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   MENÚS FLOTANTES (portal sobre <body>)
+   --------------------------------------------------------------------------
+   Se dibujan fuera del árbol para que ningún contenedor con overflow los
+   recorte — ver nucleo/MenuDesplegable.jsx.
+   ========================================================================== */
+.menu-flotante {
+  position: fixed;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.45);
+  padding: 6px;
+  z-index: 4000;
+  overflow-y: auto;
+  animation: menu-abrir 0.13s ease;
+}
+
+@keyframes menu-abrir {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.menu-flotante-cabecera {
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 6px;
+}
+
+.menu-flotante-opcion {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  text-decoration: none;
+  font-size: 13px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.menu-flotante-opcion:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+.menu-flotante-opcion.activa {
+  background: var(--acento-tint);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   ANILLO DE AMENAZA (ThreatRing)
+   ========================================================================== */
+.threat-ring { display: flex; align-items: center; gap: 9px; }
+.threat-ring-svg-wrap { position: relative; width: 28px; height: 28px; }
+.threat-ring-punto {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.threat-ring-texto { line-height: 1.2; }
+.threat-ring-nivel { font-size: 11.5px; font-weight: 600; }
+.threat-ring-conteo { font-size: 9.5px; }
+
+/* ==========================================================================
+   RESPONSIVE
+   ========================================================================== */
+@media (max-width: 1280px) {
+  .shell { --panel-der-w: 300px; }
+  .barra-subtitulo { display: none; }
+}
+
+@media (max-width: 1024px) {
+  /* El menú abierto pasa a superponerse: en pantallas medianas robarle
+     232 px al mapa lo deja inservible. */
+  .shell.menu-abierto .menu-lateral {
+    position: fixed;
+    top: var(--barra-h);
+    bottom: 0;
+    left: 0;
+    z-index: 200;
+    box-shadow: 6px 0 26px rgba(0, 0, 0, 0.4);
+  }
+  .shell.menu-abierto .shell-cuerpo { padding-left: 60px; }
+  .barra-marca { width: auto; }
+}
+
+@media (max-width: 860px) {
+  .barra-usuario-texto { display: none; }
+  .threat-ring-texto { display: none; }
+  /* El panel derecho pasa a cajón superpuesto */
+  .panel-deslizable.abierto {
+    position: fixed;
+    top: var(--barra-h);
+    right: 0;
+    bottom: 0;
+    width: min(340px, 88vw);
+    z-index: 200;
+    box-shadow: -6px 0 26px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Contador de la pestaña de alertas. Va aparte de la etiqueta para que el
+   texto pueda recortarse sin llevarse por delante el número, que es el dato
+   que hace mirar la pestaña. */
+.panel-pestana-insignia {
+  flex: none;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--alerta-roja-tint);
+  color: var(--alerta-roja);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+/* Cuatro pestañas o más en un panel de 340 px: con icono + palabra completa no
+   caben, y «Ubicación» y «Simulación» acababan recortadas con puntos
+   suspensivos. Se quita el icono, no la palabra: el icono aquí es decorativo y
+   la etiqueta es lo que identifica la pestaña. Con tres o menos se conserva. */
+.panel-pestanas.apretadas .panel-pestana-btn {
+  gap: 4px;
+  padding: 8px 3px;
+  font-size: 11.5px;
+}
+.panel-pestanas.apretadas .panel-pestana-btn .icono { display: none; }

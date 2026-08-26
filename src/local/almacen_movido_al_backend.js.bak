@@ -1,0 +1,65 @@
+// "Base de datos" del prototipo: escenarios en localStorage del navegador.
+// Sobreviven a recargas. Para resetear: localStorage.removeItem("sipro_escenarios")
+//
+// localStorage tiene un límite (~5 MB). Como cada escenario guarda todas sus
+// iteraciones con celdas, se controla el tamaño de tres formas:
+//   1. Se conservan como máximo MAX_ESCENARIOS (los más recientes).
+//   2. Si al guardar se excede la cuota, se van eliminando los más viejos y se
+//      reintenta, en vez de romper la simulación.
+//   3. Ver almacen: guardarEscenario aligera las iteraciones antes de guardar.
+const CLAVE = "sipro_escenarios";
+const MAX_ESCENARIOS = 12;
+
+function leerTodo() {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function escribirTodo(escenarios) {
+  localStorage.setItem(CLAVE, JSON.stringify(escenarios));
+}
+
+// Intenta escribir; si excede la cuota, elimina el escenario más antiguo y
+// reintenta hasta que quepa (o hasta quedarse con solo el nuevo).
+function escribirConControlDeCuota(escenarios) {
+  let lista = escenarios.slice(0, MAX_ESCENARIOS);
+  while (lista.length > 0) {
+    try {
+      escribirTodo(lista);
+      return true;
+    } catch (e) {
+      const esCuota = e && (e.name === "QuotaExceededError" || e.code === 22 || e.code === 1014);
+      if (!esCuota) throw e;
+      // Quitar el más antiguo (el último, porque el nuevo va al inicio) y reintentar
+      if (lista.length === 1) {
+        // Ni siquiera cabe uno solo: limpiar y rendirse silenciosamente
+        try { localStorage.removeItem(CLAVE); } catch { /* nada */ }
+        return false;
+      }
+      lista = lista.slice(0, lista.length - 1);
+    }
+  }
+  return false;
+}
+
+export function guardarEscenario(escenario) {
+  const todos = leerTodo();
+  todos.unshift(escenario); // más reciente primero
+  escribirConControlDeCuota(todos);
+}
+
+export function listarEscenarios() {
+  return leerTodo();
+}
+
+export function obtenerEscenario(escenarioId) {
+  return leerTodo().find((e) => e.escenario_id === escenarioId) || null;
+}
+
+// Utilidad para vaciar todos los escenarios (por si el usuario quiere resetear).
+export function limpiarEscenarios() {
+  try { localStorage.removeItem(CLAVE); } catch { /* nada */ }
+}

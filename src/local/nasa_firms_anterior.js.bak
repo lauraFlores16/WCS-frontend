@@ -1,0 +1,78 @@
+// Consumo de la NASA FIRMS API (focos de calor en tiempo casi real).
+// Documentación: https://firms.modaps.eosdis.nasa.gov/api/area/
+//
+// Devuelve focos de calor dentro del bounding box de Apolo, obtenidos de los
+// satélites VIIRS/MODIS. Estos son los puntos desde donde se puede iniciar la
+// simulación (Capa 3): la ignición real detectada por satélite.
+//
+// La API responde en CSV. El endpoint /area/csv/{KEY}/{FUENTE}/{BBOX}/{DIAS}
+// filtra por área (bounding box: oeste,sur,este,norte).
+import Papa from "papaparse";
+import { NASA_FIRMS_MAP_KEY, NASA_FIRMS_FUENTE, NASA_FIRMS_DIAS, apiKeyConfigurada } from "./nasa_firms_config";
+
+// Bounding box del municipio de Apolo (Franz Tamayo, La Paz).
+// Orden que exige FIRMS: oeste,sur,este,norte  (minLon,minLat,maxLon,maxLat)
+const BBOX_APOLO = "-69.05,-15.05,-67.55,-13.95";
+
+// Llamamos al proxy de Vite (/firms-api), NO a NASA directo, para evitar el
+// bloqueo CORS del navegador. El proxy está configurado en vite.config.js y
+// reenvía la petición a https://firms.modaps.eosdis.nasa.gov por detrás.
+// (En un despliegue de producción real, este proxy lo haría el backend.)
+const BASE_URL = "/firms-api/api/area/csv";
+
+let _cache = null;
+let _cacheTimestamp = 0;
+const CACHE_MS = 10 * 60 * 1000; // 10 minutos (no reconsultar en cada render)
+
+export async function cargarFocosFirmsEnVivo({ forzar = false } = {}) {
+  if (!apiKeyConfigurada()) {
+    throw new Error(
+      "API key de NASA FIRMS no configurada. Ábrela en src/local/nasa_firms_config.js"
+    );
+  }
+
+  const ahora = Date.now();
+  if (!forzar && _cache && ahora - _cacheTimestamp < CACHE_MS) {
+    return _cache;
+  }
+
+  const url = `${BASE_URL}/${NASA_FIRMS_MAP_KEY}/${NASA_FIRMS_FUENTE}/${BBOX_APOLO}/${NASA_FIRMS_DIAS}`;
+
+  const respuesta = await fetch(url);
+  // Leemos SIEMPRE el cuerpo primero: FIRMS explica en texto la causa de un
+  // error 400 (clave inválida, fuente mal escrita, fecha fuera de rango, etc.).
+  const texto = await respuesta.text();
+
+  if (!respuesta.ok) {
+    const detalle = texto.trim().slice(0, 300) || "(sin detalle)";
+    throw new Error(`NASA FIRMS respondió ${respuesta.status}: ${detalle}`);
+  }
+
+  // Aun con 200, si la clave es inválida FIRMS puede devolver un texto de error
+  if (texto.startsWith("Invalid") || texto.includes("Invalid MAP_KEY")) {
+    throw new Error(`NASA FIRMS: ${texto.trim().slice(0, 300)}`);
+  }
+
+  const { data } = Papa.parse(texto, { header: true, dynamicTyping: true, skipEmptyLines: true });
+
+  // Normalizar al formato que usa el resto del sistema
+  const focos = data
+    .filter((f) => f.latitude != null && f.longitude != null)
+    .map((f, i) => ({
+      id: `firms-${i}`,
+      lat: f.latitude,
+      lon: f.longitude,
+      fecha: f.acq_date || "",
+      hora: f.acq_time != null ? String(f.acq_time).padStart(4, "0") : "",
+      brillo: f.bright_ti4 ?? f.brightness ?? null,
+      frp: f.frp ?? null,              // Fire Radiative Power (intensidad)
+      confianza: f.confidence != null ? String(f.confidence) : null,
+      satelite: f.satellite || NASA_FIRMS_FUENTE,
+    }));
+
+  _cache = focos;
+  _cacheTimestamp = ahora;
+  return focos;
+}
+
+export { apiKeyConfigurada };

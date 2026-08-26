@@ -1,0 +1,356 @@
+// API LOCAL — reemplaza al backend FastAPI cuando VITE_MODO_LOCAL=true.
+// Cada función devuelve una Promise con { data } (misma forma que axios),
+// así las pantallas no necesitan saber en qué modo están corriendo.
+//
+// Fuente de datos: public/datos/grid.csv (NDVI real + probabilidad XGBoost
+// real precalculada por tu modelo V3) y public/datos/focos.csv (NASA FIRMS
+// real filtrado a Apolo). Escenarios y alertas viven en localStorage.
+import { cargarGrid, cargarFocos } from "./datos";
+import { ejecutarAutomata } from "./automata";
+import { evaluarAlertas } from "./alertas";
+import { guardarEscenario, listarEscenarios, obtenerEscenario } from "./almacen";
+import { cargarEventosHistoricos, compararConHistoricos } from "./comparacion";
+
+const AREA_POR_CELDA_HA = 25.0;
+
+// Usuarios demo (mismos que el modo local del backend Python)
+const USUARIOS_DEMO = [
+  { email: "admin@demo.sipro.com", password: "demo1234", nombre: "Administradora Demo", rol: "administrador" },
+  { email: "analista@demo.sipro.com", password: "demo1234", nombre: "Analista Demo", rol: "analista" },
+  { email: "ugr@demo.sipro.com", password: "demo1234", nombre: "UGR Demo", rol: "ugr" },
+  { email: "brigada@demo.sipro.com", password: "demo1234", nombre: "Brigada Demo", rol: "brigada" },
+];
+
+const ok = (data) => Promise.resolve({ data });
+const fallo = (detail, status = 400) =>
+  Promise.reject({ response: { status, data: { detail } } });
+
+// ---------------------------------------------------------------------------
+// Autenticación
+// ---------------------------------------------------------------------------
+export const authLocal = {
+  login: (email, password) => {
+    const u = USUARIOS_DEMO.find((x) => x.email === email && x.password === password);
+    if (!u) return fallo("Email o contraseña incorrectos", 401);
+    return ok({
+      access_token: "token-demo-local",
+      usuario_id: u.email,
+      nombre: u.nombre,
+      rol: u.rol,
+    });
+  },
+  yo: () => {
+    const guardado = localStorage.getItem("apolo_usuario");
+    if (!guardado) return fallo("Sin sesión", 401);
+    return ok(JSON.parse(guardado));
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Simulación (Panel de control + Monitoreo)
+// ---------------------------------------------------------------------------
+async function probPorCeldaMap() {
+  const grid = await cargarGrid();
+  return new Map(grid.map((c) => [c.id, c.prob_ignicion]));
+}
+
+export const simulacionLocal = {
+  // `opciones` transporta lo que el motor v2 necesita y no cabe en los
+  // parámetros del formulario: DEM (alturas reales), barreras de OSM y la
+  // serie horaria de viento. Todo es opcional: sin ellas el motor funciona
+  // igual, solo que con menos información.
+  ejecutar: async (parametros, opciones = {}) => {
+    const grid = await cargarGrid();
+    let iteraciones;
+    try {
+      iteraciones = ejecutarAutomata(grid, parametros, opciones);
+    } catch (e) {
+      return fallo(e.message);
+    }
+
+    const probs = await probPorCeldaMap();
+    const alertas = [];
+    const escenarioId = crypto.randomUUID();
+    for (let i = 0; i < iteraciones.length; i++) {
+      alertas.push(
+        ...evaluarAlertas(escenarioId, iteraciones[i], i > 0 ? iteraciones[i - 1] : null, probs)
+      );
+    }
+
+    // Variables ambientales promedio del área que se quemó — para poder comparar
+    // esta simulación contra los eventos históricos (mismas variables).
+    const ultima = iteraciones[iteraciones.length - 1];
+    const idsQuemados = new Set(ultima.celdas.map((c) => c.celda_id));
+    const gridPorId = new Map(grid.map((c) => [c.id, c]));
+    const acc = { ndvi: 0, humedad: 0, velocidad_viento: 0, temperatura_aire: 0 };
+    let nq = 0;
+    for (const id of idsQuemados) {
+      const c = gridPorId.get(id);
+      if (!c) continue;
+      acc.ndvi += c.ndvi ?? 0;
+      acc.humedad += c.humedad ?? 0;
+      acc.velocidad_viento += Math.sqrt((c.viento_u ?? 0) ** 2 + (c.viento_v ?? 0) ** 2);
+      acc.temperatura_aire += c.temperatura_aire ?? c.lst_c ?? 0;
+      nq++;
+    }
+    const variablesPromedio = nq
+      ? {
+          ndvi: +(acc.ndvi / nq).toFixed(4),
+          humedad: +(acc.humedad / nq).toFixed(4),
+          velocidad_viento: +(acc.velocidad_viento / nq).toFixed(4),
+          temperatura_aire: +(acc.temperatura_aire / nq).toFixed(4),
+        }
+      : null;
+
+    // Foco en coordenadas reales (de la celda foco del grid)
+    const celdaFoco = grid.find(
+      (c) => c.fila === parametros.foco_fila && c.columna === parametros.foco_columna
+    );
+
+    // Comprimir las iteraciones a DELTAS: en cada iteración solo se guardan las
+    // celdas cuyo estado CAMBIÓ respecto a la anterior, no todas las acumuladas.
+    // Esto reduce el tamaño ~86% (una simulación grande pasa de ~9 MB a ~1.3 MB)
+    // y evita el error de cuota de localStorage. Al leer, se reconstruye el
+    // estado completo (ver obtener()).
+    const estadoPrev = new Map();
+    const iteracionesDelta = iteraciones.map((it) => {
+      const cambios = [];
+      for (const c of it.celdas) {
+        if (estadoPrev.get(c.celda_id) !== c.estado) {
+          cambios.push({
+            celda_id: c.celda_id,
+            lat: +c.lat.toFixed(5),
+            lon: +c.lon.toFixed(5),
+            estado: c.estado,
+          });
+          estadoPrev.set(c.celda_id, c.estado);
+        }
+      }
+      return {
+        iteracion: it.iteracion,
+        num_celdas_ardiendo: it.num_celdas_ardiendo,
+        num_celdas_quemadas: it.num_celdas_quemadas,
+        cambios,
+      };
+    });
+
+    const escenario = {
+      escenario_id: escenarioId,
+      nombre: parametros.nombre_escenario || `Escenario ${new Date().toISOString()}`,
+      descripcion: parametros.descripcion || null,
+      parametros,
+      creado_en: new Date().toISOString(),
+      creado_por: JSON.parse(localStorage.getItem("apolo_usuario") || "{}").nombre || "demo",
+      iteraciones_delta: iteracionesDelta,  // formato comprimido
+      alertas,
+      // Datos para la comparación histórica:
+      variables_promedio: variablesPromedio,
+      foco_coordenadas: celdaFoco ? { lat: celdaFoco.lat, lon: celdaFoco.lon } : null,
+      area_final_ha: ultima.num_celdas_quemadas * AREA_POR_CELDA_HA,
+      // Trazabilidad del motor v2: qué constantes y qué fuentes se usaron
+      metadatos_motor: iteraciones.metadatos
+        ? {
+            constantes: iteraciones.metadatos.constantes,
+            usa_dem: iteraciones.metadatos.usa_dem,
+            celdas_con_dem: iteraciones.metadatos.celdas_con_dem,
+            usa_serie_viento: iteraciones.metadatos.usa_serie_viento,
+            barreras_osm: iteraciones.metadatos.barreras_osm,
+            saltos_spotting: iteraciones.metadatos.eventos_spotting.length,
+            minutos_por_iteracion: iteraciones.metadatos.minutos_por_iteracion,
+          }
+        : null,
+      diagnostico: parametros.diagnostico || null,
+    };
+    guardarEscenario(escenario);
+
+    // Se devuelven las iteraciones completas (para la animación inmediata)
+    return ok({ escenario_id: escenarioId, parametros, iteraciones, geojson_animado: null });
+  },
+
+  obtener: (escenarioId) => {
+    const esc = obtenerEscenario(escenarioId);
+    if (!esc) return fallo("Escenario no encontrado", 404);
+    return ok({
+      escenario_id: esc.escenario_id,
+      parametros: esc.parametros,
+      iteraciones: reconstruirIteraciones(esc),
+      geojson_animado: null,
+    });
+  },
+};
+
+// Reconstruye las iteraciones completas (con todas las celdas activas por paso)
+// a partir del formato comprimido en deltas. Es la operación inversa a la
+// compresión hecha al guardar. Compatible con escenarios en formato antiguo.
+export function reconstruirIteraciones(esc) {
+  // Escenario en formato antiguo (ya trae iteraciones completas)
+  if (esc.iteraciones && !esc.iteraciones_delta) return esc.iteraciones;
+  if (!esc.iteraciones_delta) return [];
+
+  const estado = new Map(); // celda_id -> { celda_id, lat, lon, estado }
+  return esc.iteraciones_delta.map((d) => {
+    for (const c of d.cambios) estado.set(c.celda_id, c);
+    // Solo las celdas activas (ardiendo/quemado) se dibujan en el mapa
+    const celdas = [];
+    for (const c of estado.values()) {
+      // OJO: el motor emite "quemada" (no "quemado"). Con la comparación
+      // antigua, al recargar un escenario las celdas quemadas desaparecían.
+      if (c.estado === "ardiendo" || c.estado === "quemada" || c.estado === "quemado") celdas.push(c);
+    }
+    return {
+      iteracion: d.iteracion,
+      num_celdas_ardiendo: d.num_celdas_ardiendo,
+      num_celdas_quemadas: d.num_celdas_quemadas,
+      celdas,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Escenarios (Historial)
+// ---------------------------------------------------------------------------
+export const escenariosLocal = {
+  listar: () => {
+    const prioridad = { roja: 3, naranja: 2, amarilla: 1 };
+    const resumenes = listarEscenarios().map((esc) => {
+      // Los deltas conservan los contadores por iteración; usar el formato que exista
+      const pasos = esc.iteraciones_delta || esc.iteraciones || [];
+      const ultima = pasos[pasos.length - 1];
+      const niveles = esc.alertas.map((a) => a.nivel);
+      const alertaMax = niveles.length
+        ? niveles.reduce((a, b) => (prioridad[b] > prioridad[a] ? b : a))
+        : null;
+      return {
+        escenario_id: esc.escenario_id,
+        nombre: esc.nombre,
+        creado_por: esc.creado_por,
+        creado_en: esc.creado_en,
+        parametros: esc.parametros,
+        num_iteraciones_ejecutadas: ultima ? ultima.iteracion : 0,
+        area_final_quemada_ha: (ultima ? ultima.num_celdas_quemadas : 0) * AREA_POR_CELDA_HA,
+        alerta_maxima: alertaMax,
+      };
+    });
+    return ok(resumenes);
+  },
+
+  // Escenario completo (con iteraciones reconstruidas) — para generar el informe
+  obtenerCompleto: (escenarioId) => {
+    const esc = obtenerEscenario(escenarioId);
+    if (!esc) return fallo("Escenario no encontrado", 404);
+    // Reconstruir las iteraciones completas desde los deltas para el informe
+    return ok({ ...esc, iteraciones: reconstruirIteraciones(esc) });
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Alertas
+// ---------------------------------------------------------------------------
+export const alertasLocal = {
+  historial: (escenarioId) => {
+    const esc = obtenerEscenario(escenarioId);
+    return ok(esc ? esc.alertas : []);
+  },
+  activas: (escenarioId) => {
+    const esc = obtenerEscenario(escenarioId);
+    if (!esc || !esc.alertas.length) return ok([]);
+    const maxIter = Math.max(...esc.alertas.map((a) => a.iteracion));
+    return ok(esc.alertas.filter((a) => a.iteracion === maxIter));
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Monitoreo: focos, probabilidad, gráfica
+// ---------------------------------------------------------------------------
+export const monitoreoLocal = {
+  simulacion: (escenarioId) => simulacionLocal.obtener(escenarioId),
+  alertasActivas: (escenarioId) => alertasLocal.activas(escenarioId),
+  alertasHistorial: (escenarioId) => alertasLocal.historial(escenarioId),
+
+  focosHistoricos: async (evento) => {
+    const focos = await cargarFocos();
+    const filtrados = evento ? focos.filter((f) => String(f.evento) === String(evento)) : focos;
+    return ok(
+      filtrados.map((f) => ({
+        id: f.id, lat: f.lat, lon: f.lon, fecha: f.fecha,
+        confianza: f.confianza != null ? String(f.confianza) : null,
+        evento_asociado: f.evento ? String(f.evento) : null,
+      }))
+    );
+  },
+
+  probabilidad: async () => {
+    // Probabilidad REAL precalculada por tu XGBoost V3 (predicciones_v3.csv)
+    const grid = await cargarGrid();
+    return ok(
+      grid.map((c) => ({
+        celda_id: c.id, lat: c.lat, lon: c.lon, probabilidad: c.prob_ignicion,
+      }))
+    );
+  },
+
+  // Detección automática del foco de calor: celda con mayor probabilidad
+  // de ignición según el modelo XGBoost (P3). Es el punto de inicio del autómata.
+  detectarFoco: async () => {
+    const grid = await cargarGrid();
+    let mejor = null;
+    for (const c of grid) {
+      if (c.prob_ignicion == null || isNaN(c.prob_ignicion)) continue;
+      if (!mejor || c.prob_ignicion > mejor.prob_ignicion) mejor = c;
+    }
+    if (!mejor) return fallo("No se pudo detectar ningún foco en el grid.");
+    return ok({
+      id: mejor.id, fila: mejor.fila, columna: mejor.columna,
+      lat: mejor.lat, lon: mejor.lon, prob_ignicion: mejor.prob_ignicion,
+    });
+  },
+
+  graficaPropagacion: (escenarioId) => {
+    const esc = obtenerEscenario(escenarioId);
+    if (!esc) return ok([]);
+    // Los contadores por iteración están tanto en deltas como en formato antiguo
+    const pasos = esc.iteraciones_delta || esc.iteraciones || [];
+    return ok(
+      pasos.map((it) => ({
+        iteracion: it.iteracion,
+        tiempo_minutos: it.iteracion * 15,
+        celdas_ardiendo: it.num_celdas_ardiendo,
+        celdas_quemadas: it.num_celdas_quemadas,
+        area_quemada_ha: it.num_celdas_quemadas * AREA_POR_CELDA_HA,
+      }))
+    );
+  },
+};
+
+// ---------------------------------------------------------------------------
+// Eventos históricos + comparación (validación con datos reales 2021/2023/2024)
+// ---------------------------------------------------------------------------
+export const historicosLocal = {
+  // Lista los 3 eventos históricos (para marcarlos como referencia en el mapa)
+  listar: async () => {
+    const eventos = await cargarEventosHistoricos();
+    return ok(eventos);
+  },
+
+  // Compara un escenario simulado contra los históricos -> ranking de similitud
+  comparar: async (escenarioId) => {
+    const esc = obtenerEscenario(escenarioId);
+    if (!esc) return fallo("Escenario no encontrado", 404);
+    if (!esc.variables_promedio || !esc.foco_coordenadas) {
+      return fallo("Este escenario no tiene datos suficientes para comparar (re-ejecuta la simulación).");
+    }
+    const ranking = await compararConHistoricos({
+      foco: esc.foco_coordenadas,
+      variables: esc.variables_promedio,
+    });
+    return ok({
+      escenario: {
+        nombre: esc.nombre,
+        area_final_ha: esc.area_final_ha,
+        variables: esc.variables_promedio,
+        foco: esc.foco_coordenadas,
+      },
+      ranking,
+    });
+  },
+};

@@ -1,0 +1,141 @@
+/* ===========================================================================
+   DIÁLOGO DE LA APLICACIÓN  ·  nucleo/Dialogo.jsx
+   ---------------------------------------------------------------------------
+   Usa las variables de estilos/tokens.css: aquí no se define ningún color
+   suelto, para que el modo claro y el oscuro salgan solos.
+   =========================================================================== */
+
+.dialogo-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 5000;              /* por encima del menú desplegable (4000) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg-void) 72%, transparent);
+  backdrop-filter: blur(3px);
+  animation: dialogo-aparecer 0.14s ease;
+}
+
+.dialogo {
+  width: 100%;
+  max-width: 440px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-raised);
+  overflow: hidden;
+  animation: dialogo-subir 0.16s ease;
+}
+
+/* --- Cabecera ------------------------------------------------------------ */
+.dialogo-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 12px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.dialogo-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
+  border-radius: var(--radius-sm);
+  background: var(--acento-tint);
+  color: var(--acento-500);
+}
+.dialogo-icono.es-peligroso {
+  background: var(--alerta-roja-tint);
+  color: var(--alerta-roja);
+}
+
+.dialogo-titulo {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dialogo-cerrar {
+  flex: none;
+  display: inline-flex;
+  padding: 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.dialogo-cerrar:hover:not(:disabled) {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+.dialogo-cerrar:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* --- Cuerpo -------------------------------------------------------------- */
+.dialogo-cuerpo {
+  padding: 16px;
+}
+
+.dialogo-mensaje {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.62;
+  color: var(--text-secondary);
+}
+.dialogo-mensaje strong { color: var(--text-primary); font-weight: 600; }
+
+.dialogo-detalle {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-void);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-height: 180px;
+  overflow: auto;
+}
+
+.dialogo-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 14px 0 0;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--alerta-roja) 35%, transparent);
+  border-radius: var(--radius-md);
+  background: var(--alerta-roja-tint);
+  color: var(--alerta-roja);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.dialogo-error .icono { flex: none; margin-top: 1px; }
+
+/* --- Pie ----------------------------------------------------------------- */
+.dialogo-pie {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 16px 16px;
+}
+
+@keyframes dialogo-aparecer { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialogo-subir {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dialogo-fondo, .dialogo { animation: none; }
+}

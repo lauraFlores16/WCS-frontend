@@ -1,0 +1,430 @@
+/* =====================================================================
+   Sistema de diseño — SIPRO FIRE (Sistema Inteligente de Prevención
+   y Simulación de Incendios Forestales), Apolo
+   ---------------------------------------------------------------------
+   Paleta basada en los colores institucionales de WCS (turquesa/verde/
+   azul) para la identidad del sistema. El rojo/naranja/amarillo se
+   reserva ESTRICTAMENTE para lo que representa fuego real: niveles de
+   alerta y estado "ardiendo" del autómata — igual que en el mockup de
+   portada (fondo turquesa/verde/azul oscuro, focos de incendio en
+   naranja/rojo sobre el mapa).
+   ===================================================================== */
+
+/* ---------------------------------------------------------------------
+   DOS TEMAS: oscuro (por defecto) y claro. Se cambian poniendo
+   data-tema="claro" o data-tema="oscuro" en <html> (lo hace el botón
+   de la topbar). Los estados del sistema y del autómata NO cambian
+   entre temas (semántica fija: riesgo, fuego, etc.).
+   Paleta basada en el diseño de Figma.
+   --------------------------------------------------------------------- */
+
+/* ===== TEMA OSCURO (por defecto) ===== */
+:root,
+:root[data-tema="oscuro"] {
+  /* Superficies (Figma modo oscuro) */
+  --bg-void: #0F172A;
+  --bg-panel: #1E293B;
+  --bg-panel-raised: #23324a;
+  --bg-panel-hover: #2b3b556e;
+  --border-subtle: #334155;
+  --border-strong: #415571;
+
+  --bg-sidebar: #0B2239;
+  --bg-header: #12344D;
+
+  /* Gradientes */
+  --gradiente-app: radial-gradient(1200px 800px at 15% -5%, #13294077 0%, transparent 55%),
+                   radial-gradient(1000px 700px at 100% 0%, #0f2e3f66 0%, transparent 50%),
+                   linear-gradient(160deg, #0F172A 0%, #0d1526 100%);
+  --gradiente-panel: linear-gradient(158deg, #1E293B 0%, #1a2536 100%);
+  --gradiente-marca: linear-gradient(135deg, #26A69A 0%, #3B82F6 100%);
+  --gradiente-acento: linear-gradient(135deg, #26A69A 0%, #1d857b 100%);
+
+  /* Texto */
+  --text-primary: #F8FAFC;
+  --text-secondary: #CBD5E1;
+  --text-muted: #8296ad;
+  --text-inverse: #0F172A;
+
+  /* Acento (botón principal = teal #26A69A) */
+  --acento-500: #26A69A;
+  --acento-600: #1d857b;
+  --acento-400: #3fc3b6;
+  --acento-tint: #26A69A1f;
+  --acento-glow: 0 0 0 3px rgba(38, 166, 154, 0.18);
+
+  /* Botón secundario (azul) */
+  --secundario-500: #3B82F6;
+  --secundario-600: #2563EB;
+
+  --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.35);
+  --shadow-raised: 0 2px 8px rgba(0, 0, 0, 0.4), 0 12px 32px rgba(0, 0, 0, 0.35);
+  --shadow-glow-acento: 0 4px 20px rgba(38, 166, 154, 0.28);
+}
+
+/* ===== TEMA CLARO ===== */
+:root[data-tema="claro"] {
+  /* Superficies (Figma modo claro) */
+  --bg-void: #F5F9FC;
+  --bg-panel: #FFFFFF;
+  --bg-panel-raised: #FFFFFF;
+  --bg-panel-hover: #eef4fa;
+  --border-subtle: #D6E4F0;
+  --border-strong: #bcd2e8;
+
+  --bg-sidebar: #0F5E9C;
+  --bg-header: #1565C0;
+
+  /* Gradientes */
+  --gradiente-app: radial-gradient(1200px 800px at 15% -5%, #e6f0f9 0%, transparent 55%),
+                   radial-gradient(1000px 700px at 100% 0%, #e8f4f2 0%, transparent 50%),
+                   linear-gradient(160deg, #F5F9FC 0%, #eef4fa 100%);
+  --gradiente-panel: linear-gradient(158deg, #FFFFFF 0%, #fbfdff 100%);
+  --gradiente-marca: linear-gradient(135deg, #26A69A 0%, #1976D2 100%);
+  --gradiente-acento: linear-gradient(135deg, #26A69A 0%, #1d857b 100%);
+
+  /* Texto */
+  --text-primary: #1E293B;
+  --text-secondary: #64748B;
+  --text-muted: #94a3b8;
+  --text-inverse: #FFFFFF;
+
+  --acento-500: #26A69A;
+  --acento-600: #1d857b;
+  --acento-400: #2bb3a6;
+  --acento-tint: #26A69A15;
+  --acento-glow: 0 0 0 3px rgba(38, 166, 154, 0.15);
+
+  --secundario-500: #1976D2;
+  --secundario-600: #1565C0;
+
+  --shadow-panel: 0 1px 2px rgba(30, 41, 59, 0.06), 0 6px 20px rgba(30, 41, 59, 0.08);
+  --shadow-raised: 0 2px 8px rgba(30, 41, 59, 0.1), 0 12px 28px rgba(30, 41, 59, 0.1);
+  --shadow-glow-acento: 0 4px 16px rgba(38, 166, 154, 0.2);
+}
+
+/* ===== TOKENS COMPARTIDOS (iguales en ambos temas) ===== */
+:root {
+  /* Colores institucionales WCS */
+  --wcs-turquesa: #2fafa6;
+  --wcs-verde: #4caf50;
+  --wcs-azul: #2a6db0;
+
+  /* Niveles de riesgo/alerta (semántica fija — del diseño Figma) */
+  --alerta-amarilla: #EAB308;
+  --alerta-amarilla-tint: #EAB30826;
+  --alerta-naranja: #F97316;
+  --alerta-naranja-tint: #F9731626;
+  --alerta-roja: #DC2626;
+  --alerta-roja-tint: #DC262626;
+  --riesgo-bajo: #22C55E;
+  --info: #2563EB;
+  --exito: #16A34A;
+
+  /* Estados del autómata celular (del diseño Figma) */
+  --estado-no-quemada: #4CAF50;
+  --estado-ardiendo: #F44336;
+  --estado-quemada: #6D4C41;
+  --estado-no-inflamable: #90A4AE;
+  --agua-humedad: #2563EB;
+
+  /* Tipografía */
+  --font-display: "Space Grotesk", "Segoe UI", sans-serif;
+  --font-body: "Inter", "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+
+  /* Radios */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Altura de la barra de navegación superior. Monitoreo la resta de 100vh
+     para ocupar exactamente el resto de la ventana, sin scroll. */
+  --topnav-h: 58px;
+
+  /* Heredadas del layout anterior (sidebar izquierdo + topbar de título).
+     El shell actual usa --topnav-h; se conservan por si alguna pantalla
+     antigua todavía las referencia. */
+  --sidebar-w: 248px;
+  --topbar-h: 62px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg-void);
+  background-image: var(--gradiente-app);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+::selection {
+  background: var(--acento-tint);
+}
+
+/* Foco visible por teclado — accesibilidad, no decorativo */
+:focus-visible {
+  outline: 2px solid var(--acento-400);
+  outline-offset: 2px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.panel {
+  background: var(--gradiente-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+}
+
+/* Panel con acento superior (barra de color de marca arriba) */
+.panel--acento {
+  position: relative;
+  overflow: hidden;
+}
+.panel--acento::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--gradiente-marca);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+}
+
+.badge--amarilla {
+  background: var(--alerta-amarilla-tint);
+  color: var(--alerta-amarilla);
+  border: 1px solid color-mix(in srgb, var(--alerta-amarilla) 40%, transparent);
+}
+.badge--naranja {
+  background: var(--alerta-naranja-tint);
+  color: var(--alerta-naranja);
+  border: 1px solid color-mix(in srgb, var(--alerta-naranja) 40%, transparent);
+}
+.badge--roja {
+  background: var(--alerta-roja-tint);
+  color: var(--alerta-roja);
+  border: 1px solid color-mix(in srgb, var(--alerta-roja) 40%, transparent);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-raised);
+  color: var(--text-primary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, filter 0.15s ease;
+}
+.btn:hover {
+  background: var(--bg-panel-hover);
+  border-color: var(--text-muted);
+  transform: translateY(-1px);
+}
+.btn--primary {
+  background: var(--gradiente-acento);
+  border-color: var(--acento-600);
+  color: #fff;
+  box-shadow: var(--shadow-glow-acento);
+}
+.btn--primary:hover {
+  filter: brightness(1.08);
+  border-color: var(--acento-500);
+}
+/* Acciones que destruyen datos (desactivar una cuenta, borrar un escenario).
+   El rojo aquí NO es decorativo: separa lo reversible de lo que no lo es, y
+   por eso va siempre acompañado del verbo en el texto del botón —el color
+   solo nunca debe ser la única señal. */
+.btn--peligro {
+  background: var(--alerta-roja-tint);
+  border-color: color-mix(in srgb, var(--alerta-roja) 45%, transparent);
+  color: var(--alerta-roja);
+}
+.btn--peligro:hover {
+  background: color-mix(in srgb, var(--alerta-roja) 20%, transparent);
+  border-color: var(--alerta-roja);
+}
+/* Botón discreto, para acciones dentro de una fila de tabla. */
+.btn--mini {
+  padding: 5px 10px;
+  gap: 6px;
+  font-size: 12.5px;
+  border-radius: var(--radius-sm);
+}
+/* Solo el icono: cabe en una celda sin estirar la fila. */
+.btn--icono {
+  padding: 6px;
+  gap: 0;
+  border-radius: var(--radius-sm);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.input,
+.select {
+  width: 100%;
+  padding: 9px 11px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-void);
+  color: var(--text-primary);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.input:focus,
+.select:focus {
+  border-color: var(--acento-400);
+  box-shadow: var(--acento-glow);
+  outline: none;
+}
+
+.field-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.page {
+  padding: 28px 32px;
+  max-width: 1400px;
+  animation: page-fade 0.35s ease;
+}
+
+@keyframes page-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.page-title {
+  font-size: 24px;
+  position: relative;
+  padding-left: 14px;
+}
+.page-title::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 3px;
+  bottom: 3px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--gradiente-marca);
+}
+
+.page-subtitle {
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-top: 6px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+thead th {
+  background: var(--bg-panel-raised);
+  font-family: var(--font-display);
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+tbody tr {
+  transition: background 0.12s ease;
+}
+tbody tr:hover {
+  background: var(--bg-panel-hover);
+}
+th,
+td {
+  text-align: left;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+th {
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}

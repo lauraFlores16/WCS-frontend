@@ -1,0 +1,47 @@
+// Panel de la Capa 3 para poner el foco de calor: escribiendo lat/lon,
+// o activando el modo clic (para pincharlo sobre el mapa).
+import { useState } from "react";
+
+export default function PanelFoco({ foco, onCoordenadas, modoClic, setModoClic }) {
+  const [lat, setLat] = useState("");
+  const [lon, setLon] = useState("");
+
+  function aplicar(e) {
+    e.preventDefault();
+    const la = parseFloat(lat), lo = parseFloat(lon);
+    if (isNaN(la) || isNaN(lo)) return;
+    onCoordenadas(la, lo);
+  }
+
+  return (
+    <form className="foco-panel" onSubmit={aplicar}>
+      <div className="foco-panel-campo">
+        <label>Latitud</label>
+        <input className="input" value={lat} onChange={(e) => setLat(e.target.value)}
+          placeholder="-14.6500" inputMode="decimal" />
+      </div>
+      <div className="foco-panel-campo">
+        <label>Longitud</label>
+        <input className="input" value={lon} onChange={(e) => setLon(e.target.value)}
+          placeholder="-68.2500" inputMode="decimal" />
+      </div>
+      <button type="submit" className="btn btn--primary">Marcar foco</button>
+      <button type="button" className={`btn${modoClic ? " btn--primary" : ""}`}
+        onClick={() => setModoClic(!modoClic)}>
+        {modoClic ? "Clic activo — pincha el mapa" : "Marcar con clic"}
+      </button>
+
+      <div className="foco-panel-hint">
+        {modoClic ? (
+          <span className="foco-panel-modo-clic">Haz clic sobre el mapa para colocar el foco de calor.</span>
+        ) : foco ? (
+          <>Foco actual: <span className="mono">{foco.lat.toFixed(5)}, {foco.lon.toFixed(5)}</span>
+            {" "}· celda fila {foco.fila}, col {foco.columna}
+            {foco.prob_ignicion != null && <> · prob {foco.prob_ignicion.toFixed(4)}</>}</>
+        ) : (
+          <>Escribe coordenadas o usa el clic. El foco se guarda para la simulación en Panel de control.</>
+        )}
+      </div>
+    </form>
+  );
+}

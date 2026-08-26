@@ -1,0 +1,63 @@
+// Barra de medición de probabilidad de incendio (Capas 2 y 3).
+// Muestra el resultado de la verificación automática: porcentaje, nivel, el
+// desglose por componente (XGBoost, meteorología, histórico) y el botón para
+// ejecutar la simulación (Capa 4).
+export default function BarraProbabilidad({ verificacion, onEjecutarSimulacion, puedeSimular }) {
+  if (!verificacion) return null;
+
+  const { porcentaje, nivel, colorNivel, componentes, historico, meteo, hayCombustible } = verificacion;
+
+  return (
+    <div className="barra-prob">
+      <div className="barra-prob-cabecera">
+        <div>
+          <span className="barra-prob-titulo">Probabilidad de incendio</span>
+          <span className="barra-prob-nivel" style={{ background: colorNivel }}>{nivel}</span>
+        </div>
+        <span className="barra-prob-pct" style={{ color: colorNivel }}>{porcentaje}%</span>
+      </div>
+
+      {/* Barra de medición */}
+      <div className="barra-prob-track">
+        <div className="barra-prob-fill" style={{ width: `${porcentaje}%`, background: colorNivel }} />
+        <span className="barra-prob-marca" style={{ left: "40%" }} title="Umbral medio" />
+        <span className="barra-prob-marca" style={{ left: "66%" }} title="Umbral alto" />
+      </div>
+
+      {/* Desglose por componente */}
+      <div className="barra-prob-componentes">
+        <Componente label="Modelo XGBoost" valor={componentes.xgboost} />
+        <Componente label="Meteorología (30-30-30)" valor={componentes.meteorologico} />
+        <Componente label="Histórico (años ant.)" valor={componentes.historico}
+          extra={historico.eventoCercano ? `${historico.distanciaKm} km de ${historico.eventoCercano.anio}` : null} />
+      </div>
+
+      {!hayCombustible && (
+        <p className="barra-prob-aviso">
+          Zona árida (sin vegetación suficiente): el fuego no se propagaría aquí.
+        </p>
+      )}
+
+      {puedeSimular && (
+        <button className="btn btn--primary barra-prob-boton" onClick={onEjecutarSimulacion}>
+          Ejecutar simulación
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Componente({ label, valor, extra }) {
+  return (
+    <div className="barra-prob-comp">
+      <div className="barra-prob-comp-cab">
+        <span>{label}</span>
+        <span className="mono">{valor}%</span>
+      </div>
+      <div className="barra-prob-comp-track">
+        <div className="barra-prob-comp-fill" style={{ width: `${valor}%` }} />
+      </div>
+      {extra && <span className="barra-prob-comp-extra">{extra}</span>}
+    </div>
+  );
+}

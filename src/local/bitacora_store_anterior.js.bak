@@ -1,0 +1,33 @@
+// Bitácora de actividad del sistema. Registra acciones en localStorage para
+// que la pantalla de Bitácora (admin) muestre un historial real de lo que se
+// hace en el prototipo (crear usuarios, ejecutar simulaciones, etc.).
+const CLAVE = "sisprop_bitacora";
+const MAX = 200;
+
+// Registros de ejemplo (se siembran la primera vez, para que la pantalla no
+// aparezca vacía en una demo recién abierta).
+const SEMILLA = [
+  { t: Date.now() - 3600e3 * 2, u: "sistema", a: "Actualización NASA FIRMS", d: "Consulta de focos activos en Apolo", tp: "alert" },
+  { t: Date.now() - 3600e3 * 5, u: "analista", a: "Ejecutó simulación", d: "Autómata celular · vecindad de Moore", tp: "sim" },
+  { t: Date.now() - 3600e3 * 26, u: "admin", a: "Creó usuario", d: "Nuevo usuario · rol Brigada", tp: "user" },
+  { t: Date.now() - 3600e3 * 30, u: "sistema", a: "Carga de datos espaciales", d: "grid.csv · 36.390 celdas", tp: "data" },
+];
+
+function leer() {
+  try {
+    const g = JSON.parse(localStorage.getItem(CLAVE));
+    if (Array.isArray(g)) return g;
+  } catch { /* vacío */ }
+  localStorage.setItem(CLAVE, JSON.stringify(SEMILLA));
+  return [...SEMILLA];
+}
+
+export function registrarBitacora(usuario, accion, detalle, tipo = "data") {
+  const registros = leer();
+  registros.unshift({ t: Date.now(), u: usuario || "sistema", a: accion, d: detalle, tp: tipo });
+  localStorage.setItem(CLAVE, JSON.stringify(registros.slice(0, MAX)));
+}
+
+export function listarBitacora() {
+  return leer();
+}

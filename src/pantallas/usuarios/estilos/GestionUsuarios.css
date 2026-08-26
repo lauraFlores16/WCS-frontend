@@ -1,0 +1,319 @@
+.usuarios-form-crear {
+  padding: 20px;
+  margin-bottom: 24px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr 1fr 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.usuarios-error {
+  color: var(--alerta-roja);
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.usuarios-rol-select {
+  width: auto;
+  padding: 5px 8px;
+}
+
+.usuarios-boton-desactivar {
+  padding: 5px 12px;
+  font-size: 12px;
+}
+
+.usuarios-nota-seguridad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+}
+
+/* --- Botón editar --- */
+.usuarios-boton-editar {
+  padding: 4px 12px;
+  font-size: 12.5px;
+}
+
+/* --- Modal de edición --- */
+.usuarios-modal-fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.usuarios-modal {
+  width: 100%;
+  max-width: 420px;
+  padding: 24px;
+}
+.usuarios-modal-titulo {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 18px;
+  color: var(--text-primary);
+}
+.usuarios-modal-campo {
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.usuarios-modal-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.usuarios-modal-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+/* ===== Roles y Permisos ===== */
+.roles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+.roles-card {
+  padding: 16px;
+}
+.roles-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid;
+  margin-bottom: 10px;
+}
+.roles-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+.roles-matriz-panel {
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.roles-matriz-titulo {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 14px;
+  color: var(--text-primary);
+}
+/* La matriz hereda la tabla de nucleo/estilos/Pantalla.css (cabecera pegajosa,
+   scroll dentro de su envoltura). Aquí solo lo que le es propio. */
+
+/* Fila separadora de grupo: agrupa los permisos por lo que significan
+   —operación del GIS, documentación, administración—, que es justo el eje por
+   el que se reparten los roles. */
+.roles-grupo td {
+  padding: 14px 14px 7px !important;
+  background: var(--bg-void);
+  border-bottom: 1px solid var(--border-strong) !important;
+}
+.roles-grupo:hover td { background: var(--bg-void) !important; }
+.roles-grupo-titulo {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--acento-500);
+}
+.roles-grupo-sub {
+  margin-left: 10px;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.roles-aviso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--alerta-amarilla-tint);
+  border: 1px solid color-mix(in srgb, var(--alerta-amarilla) 30%, transparent);
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  color: var(--alerta-amarilla);
+}
+
+/* ===== Configuración ===== */
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.config-card {
+  padding: 18px;
+}
+.config-titulo {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--acento-500);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.config-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.config-fila:last-child {
+  border-bottom: none;
+}
+.config-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.config-valor {
+  font-size: 12px;
+  text-align: right;
+}
+
+/* ===== Bitácora ===== */
+.bitacora-controles {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.bitacora-filtros {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.bitacora-filtro {
+  padding: 6px 13px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+.bitacora-filtro:hover {
+  border-color: var(--acento-500);
+  color: var(--text-secondary);
+}
+.bitacora-filtro.activo {
+  background: var(--acento-500);
+  border-color: var(--acento-500);
+  color: #fff;
+  font-weight: 600;
+}
+.bitacora-buscar {
+  width: auto;
+  min-width: 200px;
+  margin-left: auto;
+}
+/* Etiqueta de tipo de registro.
+   Un solo color para todos los tipos, a propósito. Antes cada tipo tenía el
+   suyo —`alert` rojo, `sim` naranja— tomados de la escala de gravedad del
+   fuego, y la bitácora acababa pareciendo un tablero de alarmas cuando lo
+   único que hace es clasificar. En este sistema el rojo significa incendio;
+   gastarlo en «tipo de registro» se lo quita donde de verdad importa. */
+.bitacora-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  padding: 2px 9px;
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Detalle largo dentro de una tabla: se recorta en vez de ensanchar la fila. */
+.celda-detalle {
+  max-width: 340px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+/* Celda editable de la matriz de permisos (botón toggle) */
+.roles-celda {
+  width: 34px;
+  height: 30px;
+  /* Antes: var(--borde), que no existe en estilos/tokens.css —el token se
+     llama --border-subtle—. Al no resolverse, `border-color` caía en
+     currentColor y el borde tomaba el color del texto de la celda. */
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--text-muted);
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+/* Permitido / denegado se distinguen por el ICONO (✓ frente a ✕) además de
+   por el color. Antes el estado denegado era un guion y la diferencia
+   descansaba en la opacidad, que no es una señal fiable. */
+.roles-celda.activa {
+  background: var(--acento-tint);
+  border-color: color-mix(in srgb, var(--acento-500) 45%, transparent);
+  color: var(--acento-500);
+}
+/* Casilla que no se puede cambiar: el administrador no puede quedarse sin los
+   permisos que le dejan administrar. */
+.roles-celda.fija {
+  cursor: not-allowed;
+  opacity: 0.9;
+  border-style: dashed;
+}
+.roles-celda:disabled { cursor: not-allowed; }
+.roles-celda:not(:disabled):hover {
+  border-color: var(--acento-500);
+  color: var(--acento-500);
+}
+
+/* Barra de búsqueda y filtros del CRUD */
+.usuarios-filtros {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+  align-items: center;
+}
+
+/* Botones de acción compactos en la tabla */
+.usuarios-boton-mini {
+  padding: 4px 10px;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
+/* Lista de definición para el modal de detalle */
+.usuarios-detalle {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: 8px 14px;
+  margin: 8px 0 4px;
+  font-size: 13.5px;
+}
+.usuarios-detalle dt { color: var(--text-muted); }
+.usuarios-detalle dd { margin: 0; word-break: break-word; }

@@ -1,0 +1,122 @@
+.datos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.datos-tarjeta {
+  padding: 20px 22px;
+}
+
+.datos-tarjeta-modulo {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--acento-500);
+  margin-bottom: 6px;
+}
+
+.datos-tarjeta-titulo {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 14px;
+  color: var(--text-primary);
+}
+
+.datos-kpi {
+  font-size: 30px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.datos-kpi-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.datos-fuentes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.datos-fuente-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-subtle);
+  font-size: 11.5px;
+  width: fit-content;
+}
+
+.datos-fuente-punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--acento-500);
+  flex-shrink: 0;
+}
+
+.datos-variables-lista {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.datos-var-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 13px;
+}
+
+.datos-var-rango {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--acento-400);
+}
+
+.datos-focos-tabla {
+  width: 100%;
+}
+
+.datos-focos-tabla th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  padding-bottom: 8px;
+}
+
+.datos-focos-tabla td {
+  font-size: 13px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.datos-estado-carga {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.datos-estado-punto {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}

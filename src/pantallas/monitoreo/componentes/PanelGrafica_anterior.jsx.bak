@@ -1,0 +1,34 @@
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from "recharts";
+
+const COLOR_ARDIENDO = "#e8491c";
+const COLOR_QUEMADAS = "#5c6268";
+
+export default function PanelGrafica({ puntos }) {
+  if (!puntos?.length) return null;
+  return (
+    <div className="panel monitoreo-panel-lateral">
+      <div className="monitoreo-panel-titulo">Propagación en el tiempo</div>
+      <ResponsiveContainer width="100%" height={200}>
+        <AreaChart data={puntos}>
+          <defs>
+            <linearGradient id="mardiendo" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={COLOR_ARDIENDO} stopOpacity={0.5} />
+              <stop offset="95%" stopColor={COLOR_ARDIENDO} stopOpacity={0} />
+            </linearGradient>
+            <linearGradient id="mquemadas" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={COLOR_QUEMADAS} stopOpacity={0.5} />
+              <stop offset="95%" stopColor={COLOR_QUEMADAS} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#24382f" />
+          <XAxis dataKey="iteracion" stroke="#7c908a" fontSize={11} />
+          <YAxis stroke="#7c908a" fontSize={11} />
+          <Tooltip contentStyle={{ background: "#13201c", border: "1px solid #24382f", fontSize: 12 }} />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          <Area type="monotone" dataKey="celdas_ardiendo" name="Ardiendo" stroke={COLOR_ARDIENDO} fill="url(#mardiendo)" />
+          <Area type="monotone" dataKey="celdas_quemadas" name="Quemadas" stroke={COLOR_QUEMADAS} fill="url(#mquemadas)" />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}

@@ -1,0 +1,93 @@
+.panel-control-form {
+  padding: 24px;
+  max-width: 640px;
+}
+
+.panel-control-campo {
+  margin-bottom: 16px;
+}
+
+.panel-control-fila-doble {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.panel-control-slider {
+  margin-bottom: 18px;
+}
+
+.panel-control-slider-cabecera {
+  display: flex;
+  justify-content: space-between;
+}
+
+.panel-control-slider-valor {
+  font-size: 12px;
+  color: var(--acento-400);
+}
+
+.panel-control-error {
+  color: var(--alerta-roja);
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+/* --- Fuentes de datos que alimentaron el escenario automático --- */
+.panel-control-fuentes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.panel-control-fuente {
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.panel-control-fuente-etiqueta {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+.panel-control-fuente-valor {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+.panel-control-fuente-origen {
+  font-size: 10.5px;
+  color: var(--acento-400);
+  margin-top: 3px;
+}
+.panel-control-fuente-nota {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-top: 6px;
+}
+
+/* Marca los campos que el usuario cambió respecto del valor automático */
+.panel-control-editado {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--alerta-amarilla-tint);
+  border: 1px solid var(--alerta-amarilla);
+  color: var(--alerta-amarilla);
+  font-size: 9.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+.panel-control-ayuda {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-muted);
+  margin-top: 5px;
+}

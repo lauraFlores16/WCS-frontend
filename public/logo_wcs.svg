@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 90" width="260" height="90">
+  <!-- Logo institucional WCS (representación tipográfica; reemplazable por el oficial) -->
+  <rect x="0" y="0" width="260" height="90" fill="none"/>
+  <text x="8" y="52" font-family="Arial, sans-serif" font-size="42" font-weight="800" fill="#2a6db0" letter-spacing="1">WCS</text>
+  <line x1="8" y1="62" x2="118" y2="62" stroke="#2fafa6" stroke-width="3"/>
+  <text x="8" y="78" font-family="Arial, sans-serif" font-size="10.5" font-weight="600" fill="#1a2b25">WILDLIFE CONSERVATION SOCIETY</text>
+  <!-- Marca gráfica simple -->
+  <g transform="translate(150, 12)">
+    <circle cx="45" cy="33" r="32" fill="#2fafa6" opacity="0.12"/>
+    <path d="M25 45 Q35 20 45 33 Q55 46 65 22" stroke="#4caf50" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    <circle cx="45" cy="33" r="4" fill="#e8491c"/>
+  </g>
+</svg>

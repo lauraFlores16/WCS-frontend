@@ -1,0 +1,360 @@
+// Monitoreo — arquitectura de 5 capas sobre imagen satelital de Franz Tamayo (Apolo):
+//   Capa 1 Topografía · Capa 2 Ambiental · Capa 3 Focos activos NASA FIRMS
+//   Capa 4 Autómatas celulares (propagación) · Capa 5 Tiempo de propagación
+//
+// Flujo automático (Capas 2 y 3): al seleccionar un foco se ejecuta la
+// verificación AUTOMÁTICA de probabilidad (XGBoost + meteorología 30-30-30 +
+// histórico de años anteriores), se muestra una barra de medición y una
+// notificación en la ubicación exacta, con botón "Ejecutar simulación" (Capa 4).
+// Al terminar la simulación se calcula el tiempo de propagación (Capa 5).
+import { useEffect, useRef, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import BaseMap, { FONDOS } from "../../nucleo/BaseMap";
+import SelectorEscenario from "../../nucleo/SelectorEscenario";
+import { useAuth } from "../../nucleo/AuthContext";
+import { useEscenario } from "../../nucleo/EscenarioContext";
+import { cargarGrid } from "../../local/datos";
+import { colorTopografia, colorAmbiental, colorProbabilidad, celdaMasCercana } from "../../local/capas";
+import { cargarFocosFirmsEnVivo, apiKeyConfigurada } from "../../local/nasa_firms";
+import { verificarProbabilidadIncendio } from "../../local/verificacion_probabilidad";
+import { calcularTiempoPropagacion, compararConHistoricoTiempo } from "../../local/tiempo_propagacion";
+import { compararConHistoricos } from "../../local/comparacion";
+import { monitoreoApi } from "./api";
+import { historicosApi } from "./api-historicos";
+import { escenariosLocal, simulacionLocal } from "../../local/api";
+import { registrarBitacora } from "../../local/bitacora_store";
+import SelectorCapas, { LeyendaCapa } from "./componentes/SelectorCapas";
+import CapaColoreada from "./componentes/CapaColoreada";
+import CapaPropagacion from "./componentes/CapaPropagacion";
+import CapaFocosFirms from "./componentes/CapaFocosFirms";
+import LimiteMunicipio from "./componentes/LimiteMunicipio";
+import CapturadorClic from "./componentes/CapturadorClic";
+import MarcadorFoco from "./componentes/MarcadorFoco";
+import MarcadoresHistoricos from "./componentes/MarcadoresHistoricos";
+import PanelFoco from "./componentes/PanelFoco";
+import PanelAlertas from "./componentes/PanelAlertas";
+import PanelRadar from "./componentes/PanelRadar";
+import PanelGrafica from "./componentes/PanelGrafica";
+import BarraProbabilidad from "./componentes/BarraProbabilidad";
+import NotificacionProbabilidad from "./componentes/NotificacionProbabilidad";
+import PanelTiempoPropagacion from "./componentes/PanelTiempoPropagacion";
+import { generarInformeIncendio } from "../historial/informe_incendio";
+import VisorInforme from "../historial/VisorInforme";
+import "./estilos/Monitoreo.css";
+
+export default function Monitoreo() {
+  const { usuario } = useAuth();
+  const { escenarioId, foco, seleccionarFoco, seleccionarEscenario } = useEscenario();
+  const navigate = useNavigate();
+
+  const [fondo, setFondo] = useState("satelite");
+  const [mapa, setMapa] = useState(null);
+  const onMapReady = useCallback((m) => setMapa(m), []);
+
+  const [grid, setGrid] = useState([]);
+  const [capaActiva, setCapaActiva] = useState(3);
+  const [modoClic, setModoClic] = useState(false);
+  const [historicos, setHistoricos] = useState([]);
+  const [mostrarHistoricos, setMostrarHistoricos] = useState(true);
+
+  const [focosFirms, setFocosFirms] = useState([]);
+  const [firmsCargando, setFirmsCargando] = useState(false);
+  const [firmsError, setFirmsError] = useState(null);
+
+  const [verificacion, setVerificacion] = useState(null);
+
+  const [simulacion, setSimulacion] = useState(null);
+  const [indice, setIndice] = useState(0);
+  const [reproduciendo, setReproduciendo] = useState(false);
+  const timer = useRef(null);
+
+  const [tiempoProp, setTiempoProp] = useState(null);
+  const [comparacionHist, setComparacionHist] = useState(null);
+  const [escenarioCompleto, setEscenarioCompleto] = useState(null);
+
+  const [alertasActivas, setAlertasActivas] = useState([]);
+  const [alertasHistorial, setAlertasHistorial] = useState([]);
+  const [mostrarHistorialAlertas, setMostrarHistorialAlertas] = useState(false);
+  const [puntosGrafica, setPuntosGrafica] = useState([]);
+  const [cargando, setCargando] = useState(false);
+
+  const puedeSimular = usuario?.rol === "analista" || usuario?.rol === "ugr";
+  const pasoCapa = 2;
+
+  useEffect(() => {
+    cargarGrid().then((g) => setGrid(g));
+    historicosApi.listar().then(({ data }) => setHistoricos(data));
+  }, []);
+
+  function ejecutarVerificacion(lat, lon) {
+    if (grid.length === 0) return;
+    setVerificacion(verificarProbabilidadIncendio(lat, lon, grid, historicos));
+  }
+
+  function cargarFirms(forzar = false) {
+    if (!apiKeyConfigurada()) {
+      setFirmsError("Configura tu API key en src/local/nasa_firms_config.js");
+      return;
+    }
+    setFirmsCargando(true);
+    setFirmsError(null);
+    cargarFocosFirmsEnVivo({ forzar })
+      .then((focos) => setFocosFirms(focos))
+      .catch((e) => setFirmsError(e.message))
+      .finally(() => setFirmsCargando(false));
+  }
+
+  useEffect(() => {
+    if (capaActiva === 3 && focosFirms.length === 0 && !firmsError && apiKeyConfigurada()) {
+      cargarFirms(false);
+    }
+  }, [capaActiva]);
+
+  function ponerFoco(lat, lon, zoom = 14) {
+    const celda = celdaMasCercana(grid, lat, lon);
+    if (!celda) return;
+    seleccionarFoco(celda);
+    setModoClic(false);
+    ejecutarVerificacion(celda.lat, celda.lon);
+    if (mapa) mapa.flyTo([celda.lat, celda.lon], zoom, { duration: 1.6 });
+  }
+  const ponerFocoPorCoordenadas = (lat, lon) => ponerFoco(lat, lon);
+  const usarFocoFirms = (f) => ponerFoco(f.lat, f.lon);
+  const usarFocoHistorico = (ev) => ponerFoco(ev.foco.lat, ev.foco.lon, 13);
+
+  async function ejecutarSimulacion() {
+    if (!foco) return;
+    setCargando(true);
+    try {
+      const params = {
+        foco_fila: foco.fila,
+        foco_columna: foco.columna,
+        p_base: 0.4,
+        num_iteraciones: 20,
+        multiplicador_viento: 1.0,
+        delta_humedad: 0,
+        delta_temperatura_c: 0,
+        nombre_escenario: `Simulación ${new Date().toLocaleTimeString("es-BO")}`,
+      };
+      const { data } = await simulacionLocal.ejecutar(params);
+      seleccionarEscenario(data.escenario_id); // carga la simulación vía el efecto de escenarioId
+      setCapaActiva(4);                          // saltar a la Capa 4 (autómata)
+      registrarBitacora(usuario?.nombre || "analista", "Ejecutó simulación",
+        `Foco ${foco.fila},${foco.columna} · desde probabilidad`, "sim");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!escenarioId) {
+      setSimulacion(null); setAlertasActivas([]); setAlertasHistorial([]);
+      setPuntosGrafica([]); setTiempoProp(null); setComparacionHist(null);
+      return;
+    }
+    setCargando(true);
+    Promise.all([
+      monitoreoApi.simulacion(escenarioId),
+      monitoreoApi.alertasActivas(escenarioId),
+      monitoreoApi.alertasHistorial(escenarioId),
+      monitoreoApi.graficaPropagacion(escenarioId),
+      escenariosLocal.obtenerCompleto(escenarioId),
+    ]).then(([sim, activas, historial, grafica, completo]) => {
+      setSimulacion(sim.data);
+      setIndice(0);
+      setAlertasActivas(activas.data);
+      setAlertasHistorial(historial.data);
+      setPuntosGrafica(grafica.data);
+
+      const esc = completo.data;
+      setEscenarioCompleto(esc);
+      const tiempo = calcularTiempoPropagacion(esc, new Date());
+      setTiempoProp(tiempo);
+
+      if (esc.foco_coordenadas && esc.variables_promedio) {
+        compararConHistoricos({ foco: esc.foco_coordenadas, variables: esc.variables_promedio })
+          .then((ranking) => {
+            if (ranking && ranking[0] && tiempo) {
+              setComparacionHist(compararConHistoricoTiempo(tiempo, ranking[0].evento));
+            }
+          });
+      }
+    }).finally(() => setCargando(false));
+  }, [escenarioId]);
+
+  useEffect(() => {
+    if (!reproduciendo || !simulacion) return;
+    timer.current = setInterval(() => {
+      setIndice((i) => {
+        if (i >= simulacion.iteraciones.length - 1) { setReproduciendo(false); return i; }
+        return i + 1;
+      });
+    }, 700);
+    return () => clearInterval(timer.current);
+  }, [reproduciendo, simulacion]);
+
+  const [informeVisor, setInformeVisor] = useState(null);
+  function generarReporte() {
+    if (escenarioCompleto) {
+      const html = generarInformeIncendio(escenarioCompleto);
+      setInformeVisor({ html, nombre: escenarioCompleto.nombre });
+    }
+  }
+
+  const iteracion = simulacion?.iteraciones?.[indice];
+  const enCapasProbabilidad = capaActiva === 2 || capaActiva === 3;
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Monitoreo — Municipio Franz Tamayo (Apolo)</h1>
+          <p className="page-subtitle">
+            5 capas · verificación automática de probabilidad · simulación y tiempo de propagación
+          </p>
+        </div>
+      </div>
+
+      <SelectorEscenario />
+
+      <div className="monitoreo-layout">
+        <div className="panel monitoreo-mapa-panel">
+
+          <SelectorCapas capaActiva={capaActiva} setCapaActiva={setCapaActiva} />
+
+          {(capaActiva === 2 || capaActiva === 3 || capaActiva === 4) && puedeSimular && (
+            <PanelFoco foco={foco} onCoordenadas={ponerFocoPorCoordenadas}
+              modoClic={modoClic} setModoClic={setModoClic} />
+          )}
+
+          {enCapasProbabilidad && verificacion && (
+            <BarraProbabilidad verificacion={verificacion}
+              onEjecutarSimulacion={ejecutarSimulacion} puedeSimular={puedeSimular} />
+          )}
+          {enCapasProbabilidad && !verificacion && (
+            <div className="text-muted" style={{ fontSize: 12.5, marginBottom: 12 }}>
+              Selecciona un foco (clic en el mapa, coordenadas, foco NASA FIRMS o histórico) para
+              verificar automáticamente la probabilidad de incendio.
+            </div>
+          )}
+
+          {capaActiva === 5 && (
+            <PanelTiempoPropagacion tiempo={tiempoProp} comparacionHist={comparacionHist}
+              onGenerarReporte={escenarioCompleto ? generarReporte : null} />
+          )}
+
+          <div className="monitoreo-toolbar">
+            <div className="monitoreo-fondo-selector">
+              {Object.entries(FONDOS).map(([key, cfg]) => (
+                <button key={key} className={`monitoreo-fondo-btn${fondo === key ? " activo" : ""}`}
+                  onClick={() => setFondo(key)}>{cfg.label}</button>
+              ))}
+            </div>
+            {capaActiva === 3 && (
+              <button className="btn" onClick={() => cargarFirms(true)} disabled={firmsCargando}>
+                {firmsCargando ? "Consultando…" : "↻ Actualizar FIRMS"}
+              </button>
+            )}
+            <button className={`btn${mostrarHistoricos ? " btn--primary" : ""}`}
+              onClick={() => setMostrarHistoricos((v) => !v)}>
+              Históricos {mostrarHistoricos ? "(visibles)" : "(ocultos)"}
+            </button>
+          </div>
+
+          {capaActiva === 3 && firmsError && (
+            <div className="monitoreo-foco-info" style={{ marginBottom: 12,
+              background: "var(--alerta-amarilla-tint)", borderColor: "var(--alerta-amarilla)" }}>
+              <span className="monitoreo-foco-info-punto" style={{ background: "var(--alerta-amarilla)" }} />
+              {firmsError}
+            </div>
+          )}
+          {capaActiva === 3 && !firmsError && (
+            <div className="text-muted" style={{ fontSize: 12, marginBottom: 10 }}>
+              {firmsCargando ? "Consultando focos a NASA FIRMS…"
+                : `${focosFirms.length} focos activos detectados. Clic en un foco para verificar su probabilidad.`}
+            </div>
+          )}
+
+          <BaseMap fondo={fondo} onMapReady={onMapReady}>
+            {/* Frontera oficial del municipio de Apolo — siempre visible */}
+            <LimiteMunicipio visible={true} />
+
+            {grid.length > 0 && capaActiva === 1 && (
+              <CapaColoreada celdas={grid} colorDe={(c) => colorTopografia(c).color} opacidad={0.5} paso={pasoCapa} />
+            )}
+            {grid.length > 0 && capaActiva === 2 && (
+              <CapaColoreada celdas={grid} colorDe={(c) => colorAmbiental(c).color} opacidad={0.5} paso={pasoCapa} />
+            )}
+            {capaActiva === 3 && focosFirms.length > 0 && (
+              <CapaFocosFirms focos={focosFirms} onSeleccionarFoco={puedeSimular ? usarFocoFirms : null} />
+            )}
+            {grid.length > 0 && (capaActiva === 4 || capaActiva === 5) && (
+              <CapaColoreada celdas={grid} colorDe={(c) => colorProbabilidad(c.prob_ignicion)} opacidad={0.35} paso={pasoCapa} />
+            )}
+
+            {(capaActiva === 4 || capaActiva === 5) && iteracion && <CapaPropagacion celdas={iteracion.celdas} />}
+
+            {(capaActiva === 2 || capaActiva === 3 || capaActiva === 4) && <MarcadorFoco foco={foco} />}
+            {(capaActiva === 2 || capaActiva === 3 || capaActiva === 4) && (
+              <CapturadorClic activo={modoClic} onClic={ponerFocoPorCoordenadas} />
+            )}
+
+            {enCapasProbabilidad && verificacion && <NotificacionProbabilidad verificacion={verificacion} />}
+
+            {mostrarHistoricos && historicos.length > 0 && (
+              <MarcadoresHistoricos eventos={historicos} onUsarComoFoco={puedeSimular ? usarFocoHistorico : null} />
+            )}
+          </BaseMap>
+
+          <LeyendaCapa capaActiva={capaActiva} />
+
+          {cargando && <p className="text-muted" style={{ marginTop: 12 }}>Cargando…</p>}
+
+          {(capaActiva === 4 || capaActiva === 5) && simulacion && iteracion && (
+            <>
+              <div className="monitoreo-transporte">
+                <button className="btn btn--primary" onClick={() => setReproduciendo((r) => !r)}>
+                  {reproduciendo ? "Pausar" : "Reproducir"}
+                </button>
+                <input type="range" min={0} max={simulacion.iteraciones.length - 1}
+                  value={indice} onChange={(e) => { setReproduciendo(false); setIndice(Number(e.target.value)); }}
+                  className="monitoreo-slider" />
+                <span className="mono" style={{ fontSize: 12.5 }}>
+                  iter. {iteracion.iteracion}/{simulacion.iteraciones.length - 1}
+                </span>
+              </div>
+              <div className="monitoreo-metricas">
+                <div>
+                  <div className="monitoreo-metrica-etiqueta">Ardiendo</div>
+                  <div className="mono monitoreo-metrica-valor" style={{ color: "var(--estado-ardiendo)" }}>{iteracion.num_celdas_ardiendo}</div>
+                </div>
+                <div>
+                  <div className="monitoreo-metrica-etiqueta">Quemadas</div>
+                  <div className="mono monitoreo-metrica-valor" style={{ color: "var(--estado-quemada)" }}>{iteracion.num_celdas_quemadas}</div>
+                </div>
+                <div>
+                  <div className="monitoreo-metrica-etiqueta">Área quemada</div>
+                  <div className="mono monitoreo-metrica-valor">{(iteracion.num_celdas_quemadas * 25).toLocaleString()} ha</div>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="monitoreo-lateral">
+          <PanelRadar verificacion={verificacion} grid={grid}
+            foco={foco} onEjecutar={ejecutarSimulacion} puedeSimular={puedeSimular} />
+          <PanelAlertas activas={alertasActivas} historial={alertasHistorial}
+            mostrarHistorial={mostrarHistorialAlertas} setMostrarHistorial={setMostrarHistorialAlertas} />
+          <PanelGrafica puntos={puntosGrafica} />
+        </div>
+      </div>
+
+      {informeVisor && (
+        <VisorInforme html={informeVisor.html} nombre={informeVisor.nombre} onCerrar={() => setInformeVisor(null)} />
+      )}
+    </div>
+  );
+}

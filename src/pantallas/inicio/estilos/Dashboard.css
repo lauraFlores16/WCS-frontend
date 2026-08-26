@@ -1,0 +1,471 @@
+/* ==========================================================================
+   TABLERO — Analista y Administrador
+   --------------------------------------------------------------------------
+   Los indicadores van en una tira compacta, NO en tarjetas grandes que se
+   coman la pantalla. Las cajas se reparten en una rejilla que se recompone
+   sola según el ancho disponible.
+   ========================================================================== */
+.tablero {
+  padding: 14px 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: page-fade 0.3s ease;
+}
+
+.tablero-cargando {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 80px 20px;
+  color: var(--text-muted);
+  font-size: 13.5px;
+}
+
+/* ---------- Indicadores compactos ---------- */
+.tablero-indicadores {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+  gap: 10px;
+}
+
+.indicador {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.indicador-icono {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: var(--acento-tint);
+  color: var(--acento-400);
+  flex-shrink: 0;
+}
+
+.indicador-texto {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.indicador-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.indicador-valor {
+  font-family: var(--font-mono);
+  font-size: 19px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.15;
+}
+
+.indicador-nota {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+/* ---------- Rejilla de cajas ---------- */
+.tablero-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(330px, 1fr));
+  gap: 12px;
+  align-items: start;
+}
+
+.tablero-caja {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* Ocupa las dos columnas cuando hay sitio: gráficas y tablas respiran mejor */
+@media (min-width: 1100px) {
+  .tablero-caja--ancha { grid-column: span 2; }
+}
+
+.caja-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.caja-titulo {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.caja-sub {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.caja-vacio {
+  margin: 0;
+  padding: 18px 0;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.caja-pie-dato {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.caja-pie-dato .mono {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ---------- Leyenda de bandas de riesgo ----------
+   El color de las bandas es semántico, pero NUNCA va solo: cada una lleva su
+   etiqueta y su rango. Verde y amarillo son casi indistinguibles en visión
+   protanope, así que el texto es lo que de verdad identifica la banda. */
+.caja-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding-top: 2px;
+}
+
+.leyenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+}
+
+.leyenda-punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.leyenda-label {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.leyenda-rango {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
+.caja-resumen {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--alerta-naranja-tint);
+  border: 1px solid var(--alerta-naranja);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.caja-resumen strong { color: var(--text-primary); }
+.caja-resumen .icono { flex-shrink: 0; margin-top: 1px; color: var(--alerta-naranja); }
+
+/* ---------- Tooltip de las gráficas ---------- */
+.grafica-tooltip {
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+}
+.grafica-tooltip-titulo {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.grafica-tooltip-detalle {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+.grafica-tooltip-valor {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--acento-400);
+  margin-top: 4px;
+}
+
+/* ---------- Lista de variables ---------- */
+.variables-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.variable-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.variable-fila:last-child { border-bottom: none; }
+
+.variable-icono {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-hover);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.variable-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.variable-nombre {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.variable-fuente {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+.variable-valores {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.variable-valor {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.variable-extra {
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+/* ---------- Modelo destacado ---------- */
+.modelo-destacado {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 13px;
+  border-radius: var(--radius-md);
+  background: var(--acento-tint);
+  border: 1px solid var(--acento-500);
+}
+
+.modelo-etiqueta {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 700;
+  color: var(--acento-400);
+}
+
+.modelo-metrica {
+  font-family: var(--font-mono);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.modelo-nota {
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* ---------- Fuentes y estado ---------- */
+.fuentes-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.fuente-fila {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+}
+.fuente-fila:last-child { border-bottom: none; }
+
+.fuente-punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--acento-500);
+  flex-shrink: 0;
+}
+
+.fuente-nombre {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.fuente-desc {
+  color: var(--text-muted);
+  font-size: 11.5px;
+  margin-left: auto;
+  text-align: right;
+  min-width: 0;
+}
+
+/* ---------- Roles (dashboard admin) ---------- */
+.roles-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+}
+
+.rol-fila { display: flex; flex-direction: column; gap: 5px; }
+
+.rol-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.rol-nombre {
+  font-size: 12.5px;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--text-primary);
+}
+
+.rol-conteo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--acento-400);
+}
+
+.rol-barra {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg-panel-hover);
+  overflow: hidden;
+}
+
+.rol-barra-relleno {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--acento-500);
+}
+
+.rol-boton {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+/* ---------- Accesos ---------- */
+.tablero-accesos { gap: 8px; }
+
+.acceso {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 11px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel-raised);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+  transition: all 0.14s ease;
+}
+.acceso:hover {
+  border-color: var(--acento-500);
+  background: var(--acento-tint);
+}
+.acceso > .icono:first-child { color: var(--acento-400); flex-shrink: 0; }
+.acceso > .icono:last-child { color: var(--text-muted); margin-left: auto; flex-shrink: 0; }
+
+.acceso-texto { display: flex; flex-direction: column; min-width: 0; }
+.acceso-titulo { font-size: 13px; font-weight: 600; }
+.acceso-desc { font-size: 11px; color: var(--text-muted); }
+
+/* ---------- Tablas ---------- */
+.tabla-envoltura {
+  overflow-x: auto;
+  margin: 0 -4px;
+}
+.tabla-envoltura table { width: 100%; }
+
+.celda-nombre {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.celda-detalle {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11.5px;
+}
+
+.etiqueta-tipo {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-hover);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* `.btn--mini` estaba duplicado aquí y en Monitoreo.css, «por si la pantalla
+   no carga la otra hoja». Ahora vive en estilos/tokens.css, que main.jsx
+   importa siempre: las dos copias sobraban y podían divergir. */

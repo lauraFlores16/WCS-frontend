@@ -1,0 +1,117 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useEscenario } from "../../nucleo/EscenarioContext";
+import { useAuth } from "../../nucleo/AuthContext";
+import { simulacionApi } from "./api";
+import { registrarBitacora } from "../../local/bitacora_store";
+import "./estilos/PanelControl.css";
+
+const DEFAULTS = {
+  foco_fila: 40, foco_columna: 40, p_base: 0.3, multiplicador_viento: 1.0,
+  delta_humedad: 0.0, delta_temperatura_c: 0, num_iteraciones: 20,
+  nombre_escenario: "", descripcion: "",
+};
+
+export default function PanelControl() {
+  const { seleccionarEscenario, foco } = useEscenario();
+  const { usuario } = useAuth();
+  const [form, setForm] = useState(() => ({
+    ...DEFAULTS,
+    // Si el usuario marcó un foco en Monitoreo (Capa 3), lo usamos aquí.
+    foco_fila: foco?.fila ?? DEFAULTS.foco_fila,
+    foco_columna: foco?.columna ?? DEFAULTS.foco_columna,
+  }));
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState(null);
+  const navigate = useNavigate();
+
+  // Si el foco cambia (viniendo de Monitoreo), reflejarlo en el formulario.
+  useEffect(() => {
+    if (foco) {
+      setForm((f) => ({ ...f, foco_fila: foco.fila, foco_columna: foco.columna }));
+    }
+  }, [foco]);
+
+  const set = (campo) => (e) => {
+    const val = e.target.type === "number" || e.target.type === "range" ? Number(e.target.value) : e.target.value;
+    setForm((f) => ({ ...f, [campo]: val }));
+  };
+
+  async function ejecutar(e) {
+    e.preventDefault();
+    setEnviando(true);
+    setError(null);
+    try {
+      const { data } = await simulacionApi.ejecutar(form);
+      registrarBitacora(usuario?.nombre || "analista", "Ejecutó simulación",
+        `${form.nombre_escenario || "Escenario"} · ${form.num_iteraciones} iteraciones`, "sim");
+      seleccionarEscenario(data.escenario_id);
+      navigate("/monitoreo");
+    } catch (err) {
+      setError(err.response?.data?.detail || "No se pudo ejecutar la simulación.");
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  return (
+    <div className="page">
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Panel de control</h1>
+          <p className="page-subtitle">Ajusta condiciones y ejecuta el autómata sobre el grid de Apolo</p>
+        </div>
+      </div>
+
+      <form onSubmit={ejecutar} className="panel panel-control-form">
+        <Campo label="Nombre del escenario">
+          <input className="input" value={form.nombre_escenario} onChange={set("nombre_escenario")}
+            placeholder="Ej. Sequía extrema — sept. 2026" />
+        </Campo>
+
+        <div className="panel-control-fila-doble">
+          <Campo label="Fila del foco">
+            <input type="number" className="input" value={form.foco_fila} onChange={set("foco_fila")} required />
+          </Campo>
+          <Campo label="Columna del foco">
+            <input type="number" className="input" value={form.foco_columna} onChange={set("foco_columna")} required />
+          </Campo>
+        </div>
+
+        <Slider label="Temperatura (Δ °C respecto al promedio)" value={form.delta_temperatura_c}
+          onChange={set("delta_temperatura_c")} min={-10} max={15} step={0.5}
+          formato={(v) => `${v > 0 ? "+" : ""}${v} °C`} />
+        <Slider label="Viento (multiplicador de velocidad)" value={form.multiplicador_viento}
+          onChange={set("multiplicador_viento")} min={0.1} max={5} step={0.1} formato={(v) => `×${v.toFixed(1)}`} />
+        <Slider label="Humedad (Δ respecto al promedio GEE)" value={form.delta_humedad}
+          onChange={set("delta_humedad")} min={-1} max={1} step={0.05} formato={(v) => `${v > 0 ? "+" : ""}${(v * 100).toFixed(0)}%`} />
+        <Slider label="Probabilidad base de propagación" value={form.p_base}
+          onChange={set("p_base")} min={0.01} max={1} step={0.01} formato={(v) => v.toFixed(2)} />
+        <Slider label="Número de iteraciones" value={form.num_iteraciones}
+          onChange={set("num_iteraciones")} min={1} max={100} step={1} formato={(v) => `${v}`} />
+
+        {error && <div className="panel-control-error">{error}</div>}
+
+        <button type="submit" className="btn btn--primary" disabled={enviando} style={{ width: "100%" }}>
+          {enviando ? "Ejecutando simulación…" : "Ejecutar simulación"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function Campo({ label, children }) {
+  return <div className="panel-control-campo"><label className="field-label">{label}</label>{children}</div>;
+}
+
+function Slider({ label, value, onChange, min, max, step, formato }) {
+  return (
+    <div className="panel-control-slider">
+      <div className="panel-control-slider-cabecera">
+        <label className="field-label" style={{ marginBottom: 8 }}>{label}</label>
+        <span className="mono panel-control-slider-valor">{formato(value)}</span>
+      </div>
+      <input type="range" min={min} max={max} step={step} value={value} onChange={onChange} style={{ width: "100%" }} />
+    </div>
+  );
+}

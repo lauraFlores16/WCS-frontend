@@ -1,0 +1,102 @@
+// Panel superior: estado de carga de cada fuente + botón de simulación.
+//
+// Resuelve dos cosas que pediste:
+//
+//  1. QUÉ PASA MIENTRAS CARGA. Antes la pantalla se quedaba muda esperando a
+//     Open-Meteo y, si tardaba o devolvía 429, aparecía un error rojo. Ahora
+//     cada fuente muestra su propio estado y, cuando una no está disponible,
+//     no se dice "error": se dice CON QUÉ se está trabajando en su lugar.
+//  2. EL BOTÓN ARRIBA. Ejecutar la simulación era lo último de la página y
+//     había que bajar hasta el final. Ahora está en la primera franja.
+
+const ICONOS = {
+  pendiente: "·",
+  cargando: null,      // se dibuja el giro
+  ok: "OK",
+  degradado: "!",
+  ausente: "—",
+};
+
+export default function PanelEjecucion({
+  fuentes,           // { clave: { estado, etiqueta, detalle, sustituto } }
+  nivel,
+  listo,
+  simulando,
+  progresoSimulacion,
+  puedeSimular,
+  onEjecutar,
+  onRefrescar,
+}) {
+  const lista = Object.entries(fuentes || {});
+  const cargando = lista.some(([, f]) => f.estado === "cargando");
+  const degradadas = lista.filter(([, f]) => f.estado === "degradado" || f.estado === "ausente");
+
+  const colorNivel =
+    nivel === "ALTO" ? "var(--alerta-roja)"
+      : nivel === "MEDIO" ? "var(--alerta-naranja)"
+      : "var(--estado-no-quemada)";
+
+  return (
+    <div className="panel ejecucion-panel">
+      <div className="ejecucion-cabecera">
+        <span className="monitoreo-panel-titulo" style={{ marginBottom: 0 }}>
+          {cargando ? "Preparando el escenario" : "Escenario listo"}
+        </span>
+        <button className="ejecucion-refrescar" onClick={onRefrescar} disabled={cargando || simulando}
+          title="Volver a consultar las fuentes">Actualizar</button>
+      </div>
+
+      {/* --- Semáforo de fuentes --- */}
+      <div className="ejecucion-fuentes">
+        {lista.map(([clave, f]) => (
+          <div key={clave} className={`ejecucion-fuente estado-${f.estado}`}
+            title={f.sustituto || f.detalle || f.etiqueta}>
+            <span className="ejecucion-fuente-icono">
+              {f.estado === "cargando" ? <span className="ejecucion-giro" /> : ICONOS[f.estado]}
+            </span>
+            <span className="ejecucion-fuente-texto">
+              <span className="ejecucion-fuente-nombre">{f.etiqueta}</span>
+              <span className="ejecucion-fuente-detalle">
+                {f.estado === "cargando" ? "consultando…" : (f.sustituto || f.detalle || "")}
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* --- Aviso agregado: nunca un error rojo, siempre "con qué se trabaja" --- */}
+      {!cargando && degradadas.length > 0 && (
+        <div className="ejecucion-sustituto">
+          Trabajando con {degradadas.length === 1 ? "un dato de respaldo" : `${degradadas.length} datos de respaldo`}.
+          La simulación se puede ejecutar igual.
+        </div>
+      )}
+
+      {/* --- Nivel de peligro + botón --- */}
+      <div className="ejecucion-accion">
+        {nivel && (
+          <span className="ejecucion-nivel" style={{ color: colorNivel, borderColor: colorNivel }}>
+            Peligro {nivel}
+          </span>
+        )}
+        {puedeSimular && (
+          <button className="btn btn--primary ejecucion-btn"
+            onClick={onEjecutar} disabled={!listo || simulando || cargando}>
+            {simulando
+              ? <><span className="ejecucion-giro ejecucion-giro--claro" /> Simulando…</>
+              : cargando ? "Cargando datos…" : "Ejecutar simulación"}
+          </button>
+        )}
+      </div>
+
+      {simulando && (
+        <div className="ejecucion-barra">
+          <div className="ejecucion-barra-relleno"
+            style={progresoSimulacion != null
+              ? { width: `${progresoSimulacion * 100}%` }
+              : undefined} />
+        </div>
+      )}
+    </div>
+  );
+}

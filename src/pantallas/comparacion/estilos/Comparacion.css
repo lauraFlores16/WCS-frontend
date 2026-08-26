@@ -1,0 +1,184 @@
+.comp-escenario-selector {
+  max-width: 420px;
+  margin-bottom: 20px;
+}
+
+.comp-resumen {
+  padding: 18px 22px;
+  margin-bottom: 20px;
+}
+
+.comp-resumen-titulo {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--acento-400);
+  margin-bottom: 12px;
+}
+
+.comp-vars {
+  display: flex;
+  gap: 26px;
+  flex-wrap: wrap;
+}
+
+.comp-var-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comp-var-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.comp-var-valor {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.comp-ranking {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.comp-card {
+  padding: 18px 22px;
+  border-left: 4px solid var(--border-strong);
+  position: relative;
+}
+
+.comp-card.top {
+  border-left-color: var(--acento-500);
+  background: linear-gradient(90deg, var(--acento-tint), transparent 60%);
+}
+
+.comp-card-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.comp-card-nombre {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.comp-card-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-strong);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 13px;
+  margin-right: 10px;
+}
+
+.comp-card.top .comp-card-rank {
+  background: var(--acento-500);
+  color: #06201c;
+  border-color: var(--acento-500);
+}
+
+.comp-puntaje {
+  text-align: right;
+}
+
+.comp-puntaje-num {
+  font-size: 30px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.comp-puntaje-label {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.comp-barras {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.comp-barra-bloque {
+  flex: 1;
+  min-width: 160px;
+}
+
+.comp-barra-cabecera {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  margin-bottom: 4px;
+}
+
+.comp-barra-track {
+  height: 7px;
+  background: var(--bg-panel-raised);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.comp-barra-fill {
+  height: 100%;
+  background: var(--acento-500);
+  border-radius: 4px;
+}
+
+.comp-detalle {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.comp-detalle-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.comp-detalle-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--text-muted);
+}
+
+.comp-detalle-valor {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.comp-vacio {
+  padding: 40px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.comp-acciones {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+}

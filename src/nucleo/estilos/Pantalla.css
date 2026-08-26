@@ -1,0 +1,326 @@
+/* ===========================================================================
+   PANTALLA INTERIOR  ·  Fase 2 del rediseño
+   ---------------------------------------------------------------------------
+   Lo comparten Historial, Comparación, Reportes, Usuarios, Roles, Bitácora y
+   Configuración: todas las pantallas que NO son el mapa.
+
+   Por qué existe esta hoja
+   ------------------------
+   Antes cada pantalla abría con su propio bloque `.page-header`:
+
+       <h1 class="page-title">Historial de escenarios</h1>
+       <p class="page-subtitle">Todas las simulaciones ejecutadas…</p>
+
+   Con el armazón nuevo eso quedó DUPLICADO: la barra superior ya escribe
+   «Historial · Simulaciones guardadas» a 52 px de ahí, así que el título salía
+   dos veces y se comía ~90 px de alto útil en cada pantalla. Aquí el hueco lo
+   ocupa la barra de herramientas —buscar, filtrar, exportar—, que sí hace
+   algo. El título vive en un solo sitio: nucleo/AppLayout.jsx.
+
+   Usa solo variables de estilos/tokens.css, para que el tema claro y el oscuro
+   funcionen sin escribir dos veces cada regla.
+   =========================================================================== */
+
+.pantalla {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px 28px;
+  max-width: 1500px;
+  animation: pantalla-entrar 0.28s ease;
+}
+
+@keyframes pantalla-entrar {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pantalla { animation: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   BARRA DE HERRAMIENTAS
+   Filtros y búsqueda a la izquierda, acciones a la derecha. Se envuelve en
+   pantallas estrechas en lugar de crear scroll horizontal.
+   --------------------------------------------------------------------------- */
+.pantalla-barra {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pantalla-barra-izq,
+.pantalla-barra-der {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pantalla-barra-izq { flex: 1; min-width: 0; }
+
+/* Campo de búsqueda con la lupa dentro */
+.pantalla-buscar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 210px;
+  flex: 0 1 300px;
+}
+.pantalla-buscar .icono {
+  position: absolute;
+  left: 10px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.pantalla-buscar .input {
+  padding-left: 32px;
+  height: 34px;
+}
+.pantalla-buscar-limpiar {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  padding: 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+.pantalla-buscar-limpiar:hover { color: var(--text-primary); background: var(--bg-panel-hover); }
+
+/* Selector compacto de la barra (rol, estado, orden…) */
+.pantalla-barra .select {
+  width: auto;
+  min-width: 132px;
+  height: 34px;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Recuento a la derecha de los filtros: «12 de 48» */
+.pantalla-conteo {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------------------
+   FICHAS DE FILTRO (la bitácora las usa para el tipo de registro)
+   Una sola familia de color para todas: el tipo de registro es una CATEGORÍA,
+   no una gravedad. Pintar «alert» de rojo y «sim» de naranja hacía que la
+   bitácora pareciera un panel de alarmas cuando solo estaba clasificando.
+   --------------------------------------------------------------------------- */
+.pantalla-fichas {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.pantalla-ficha {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 999px;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+.pantalla-ficha:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+.pantalla-ficha.activa {
+  background: var(--acento-tint);
+  border-color: color-mix(in srgb, var(--acento-500) 45%, transparent);
+  color: var(--acento-500);
+  font-weight: 600;
+}
+.pantalla-ficha-n {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* ---------------------------------------------------------------------------
+   TABLAS
+   El scroll horizontal se queda DENTRO de la envoltura: la página nunca se
+   desplaza en horizontal, que es lo que rompía el armazón.
+   --------------------------------------------------------------------------- */
+.tabla-envoltura {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+}
+
+.tabla-envoltura table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.tabla-envoltura th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  padding: 10px 14px;
+  background: var(--bg-panel-raised);
+  border-bottom: 1px solid var(--border-strong);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* Cabecera que ordena al pulsarla */
+.tabla-orden {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  background: none;
+  padding: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.tabla-orden:hover { color: var(--text-primary); }
+.tabla-orden.activa { color: var(--acento-500); }
+.tabla-orden .icono { opacity: 0.55; }
+.tabla-orden.activa .icono { opacity: 1; }
+
+.tabla-envoltura td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  vertical-align: middle;
+}
+.tabla-envoltura tbody tr:last-child td { border-bottom: none; }
+.tabla-envoltura tbody tr:hover td { background: var(--bg-panel-hover); }
+
+.celda-nombre { color: var(--text-primary); font-weight: 500; }
+.celda-acciones { white-space: nowrap; text-align: right; }
+.celda-acciones .btn + .btn { margin-left: 6px; }
+
+/* ---------------------------------------------------------------------------
+   ESTADOS VACÍOS
+   Dicen qué hacer, no solo que no hay nada.
+   --------------------------------------------------------------------------- */
+.pantalla-vacio {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 44px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.pantalla-vacio .icono { color: var(--text-muted); opacity: 0.5; }
+.pantalla-vacio-titulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.pantalla-vacio p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  max-width: 460px;
+}
+
+/* ---------------------------------------------------------------------------
+   PUNTO DE ESTADO
+   Va SIEMPRE acompañado de la palabra («Activo», «no responde»). El color por
+   sí solo no es una señal accesible, y además estos tres verdes/naranjas son
+   los mismos que la escala de riesgo del mapa: sin texto al lado se confunden.
+   --------------------------------------------------------------------------- */
+.punto-estado {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.punto-estado.es-ok { background: var(--riesgo-bajo); }
+.punto-estado.es-aviso,
+.punto-estado.es-caido { background: var(--alerta-naranja); }
+
+.estado-con-punto {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+/* Aviso en línea (error de carga, permiso insuficiente, nota del sistema) */
+.pantalla-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pantalla-aviso .icono { flex: none; margin-top: 2px; color: var(--text-muted); }
+.pantalla-aviso.es-error {
+  border-color: color-mix(in srgb, var(--alerta-roja) 35%, transparent);
+  background: var(--alerta-roja-tint);
+  color: var(--alerta-roja);
+}
+.pantalla-aviso.es-error .icono { color: var(--alerta-roja); }
+.pantalla-aviso.es-ok {
+  border-color: color-mix(in srgb, var(--acento-500) 40%, transparent);
+  background: var(--acento-tint);
+  color: var(--acento-500);
+}
+.pantalla-aviso.es-ok .icono { color: var(--acento-500); }
+
+/* ---------------------------------------------------------------------------
+   SECCIÓN CON CABECERA (Configuración, Comparación)
+   --------------------------------------------------------------------------- */
+.seccion {
+  padding: 16px 18px;
+}
+.seccion-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.seccion-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.seccion-titulo .icono { color: var(--acento-500); }
+.seccion-sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 900px) {
+  .pantalla { padding: 16px 14px 24px; }
+  .pantalla-buscar { flex: 1 1 100%; }
+}

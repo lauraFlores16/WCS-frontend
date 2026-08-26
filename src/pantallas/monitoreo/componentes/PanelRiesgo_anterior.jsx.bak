@@ -1,0 +1,84 @@
+// Panel de análisis de riesgo (Capa 3).
+// Muestra el resultado de cruzar los focos NASA FIRMS con el triángulo del
+// fuego y la probabilidad XGBoost: qué zonas tienen probabilidad de incendio
+// y cuáles no. Cada zona con riesgo lista sus coordenadas; al presionarlas se
+// selecciona el foco, y aparece el botón para lanzar la simulación.
+export default function PanelRiesgo({ analisis, cargando, focoSeleccionado, onSeleccionarZona, onSimular }) {
+  if (cargando) {
+    return (
+      <div className="riesgo-panel">
+        <p className="text-muted" style={{ fontSize: 13 }}>Analizando focos de calor…</p>
+      </div>
+    );
+  }
+  if (!analisis || analisis.zonas.length === 0) {
+    return (
+      <div className="riesgo-panel">
+        <p className="text-muted" style={{ fontSize: 13 }}>
+          No hay focos de calor para analizar en los últimos días. Un foco de calor no implica incendio;
+          se evalúa junto al triángulo del fuego (vegetación y sequedad) y la concentración de focos.
+        </p>
+      </div>
+    );
+  }
+
+  const { resumen, zonas } = analisis;
+
+  return (
+    <div className="riesgo-panel">
+      <div className="riesgo-resumen">
+        <span className="riesgo-resumen-item">
+          <strong>{resumen.total}</strong> zona{resumen.total !== 1 ? "s" : ""} de focos analizada{resumen.total !== 1 ? "s" : ""}
+        </span>
+        <span className="riesgo-resumen-item con-riesgo">
+          <span className="riesgo-punto" style={{ background: "var(--alerta-roja)" }} />
+          <strong>{resumen.conRiesgo}</strong> con probabilidad de incendio
+        </span>
+        <span className="riesgo-resumen-item sin-riesgo">
+          <span className="riesgo-punto" style={{ background: "var(--estado-no-quemada)" }} />
+          <strong>{resumen.sinRiesgo}</strong> sin riesgo significativo
+        </span>
+      </div>
+
+      <div className="riesgo-lista">
+        {zonas.map((z) => {
+          const seleccionada = focoSeleccionado && z.celda && focoSeleccionado.id === z.celda.id;
+          return (
+            <div key={z.id} className={`riesgo-zona${z.hay_riesgo ? " con-riesgo" : ""}${seleccionada ? " seleccionada" : ""}`}>
+              <div className="riesgo-zona-cabecera">
+                <span className={`riesgo-badge${z.hay_riesgo ? " rojo" : " verde"}`}>
+                  {z.hay_riesgo ? "Probabilidad de incendio" : "Sin riesgo"}
+                </span>
+                <span className="riesgo-zona-focos">
+                  {z.num_focos} foco{z.num_focos !== 1 ? "s" : ""}
+                  {z.concentrado && <span className="riesgo-concentrado"> · concentrados</span>}
+                </span>
+              </div>
+
+              <p className="riesgo-motivo">{z.motivo}</p>
+
+              <div className="riesgo-metricas">
+                <span>Probabilidad XGBoost: <strong>{(z.probabilidad * 100).toFixed(0)}%</strong></span>
+                <span>Combustible: <strong>{(z.combustible * 100).toFixed(0)}%</strong></span>
+                <span>Sequedad: <strong>{(z.sequedad * 100).toFixed(0)}%</strong></span>
+              </div>
+
+              {/* Coordenadas presionables */}
+              <button className="riesgo-coordenada" onClick={() => onSeleccionarZona(z)}>
+                {z.lat.toFixed(5)}, {z.lon.toFixed(5)}
+                {z.celda && <span className="riesgo-celda"> · celda fila {z.celda.fila}, col {z.celda.columna}</span>}
+              </button>
+
+              {/* Botón de simular: aparece al seleccionar la zona */}
+              {seleccionada && onSimular && (
+                <button className="btn btn--primary riesgo-simular" onClick={onSimular}>
+                  Realizar simulación desde esta coordenada
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

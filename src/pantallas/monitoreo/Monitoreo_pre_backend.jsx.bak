@@ -1,0 +1,434 @@
+// Monitoreo — arquitectura de 5 capas sobre imagen satelital de Franz Tamayo (Apolo).
+//
+// REORGANIZACIÓN VISUAL
+// ---------------------
+//   · La pantalla entera ocupa el alto de la ventana: no hay que hacer scroll
+//     para llegar al botón de simular.
+//   · Los paneles de monitoreo (radar, alertas, gráfica) pasan a una BARRA
+//     HORIZONTAL arriba.
+//   · El mapa crece y ocupa todo el espacio central.
+//   · A la derecha, una columna fija con las DECISIONES de la simulación:
+//     qué parámetro se eligió, de qué fuente salió y por qué.
+//   · El selector de capas es compacto y cabe en una sola fila.
+//
+// DATOS EN VIVO
+// -------------
+//   Capa 1 → DEM Copernicus (alturas) + OSM (ríos, quebradas, caminos)
+//   Capa 2 → Open-Meteo (temperatura, humedad, viento, VPD, sequedad)
+//   Capa 3 → NASA FIRMS (focos activos)
+// Todo eso alimenta parametros_auto.js, que rellena solo el escenario.
+import { useEffect, useRef, useState, useCallback } from "react";
+import BaseMap, { FONDOS } from "../../nucleo/BaseMap";
+import SelectorEscenario from "../../nucleo/SelectorEscenario";
+import { useAuth } from "../../nucleo/AuthContext";
+import { useEscenario } from "../../nucleo/EscenarioContext";
+import { cargarGrid, cargarFocos } from "../../local/datos";
+import { colorTopografia, colorAmbiental, colorProbabilidad, celdaMasCercana } from "../../local/capas";
+import { cargarFocosFirmsEnVivo, apiKeyConfigurada } from "../../local/nasa_firms";
+import { verificarProbabilidadIncendio } from "../../local/verificacion_probabilidad";
+import { calcularTiempoPropagacion, compararConHistoricoTiempo } from "../../local/tiempo_propagacion";
+import { compararConHistoricos } from "../../local/comparacion";
+import { derivarParametros } from "../../local/parametros_auto";
+import { cargarDem, cargarTerrenoOsm, estadisticasDem } from "../../local/api_terreno";
+import { calibrar, leerCalibracion } from "../../local/calibracion";
+import { monitoreoApi } from "./api";
+import { historicosApi } from "./api-historicos";
+import { escenariosLocal, simulacionLocal } from "../../local/api";
+import { registrarBitacora } from "../../local/bitacora_store";
+import SelectorCapas, { LeyendaCapa } from "./componentes/SelectorCapas";
+import CapaColoreada from "./componentes/CapaColoreada";
+import CapaPropagacion from "./componentes/CapaPropagacion";
+import CapaFocosFirms from "./componentes/CapaFocosFirms";
+import LimiteMunicipio from "./componentes/LimiteMunicipio";
+import CapturadorClic from "./componentes/CapturadorClic";
+import MarcadorFoco from "./componentes/MarcadorFoco";
+import MarcadoresHistoricos from "./componentes/MarcadoresHistoricos";
+import PanelAlertas from "./componentes/PanelAlertas";
+import PanelRadar from "./componentes/PanelRadar";
+import PanelGrafica from "./componentes/PanelGrafica";
+import NotificacionProbabilidad from "./componentes/NotificacionProbabilidad";
+import PanelTiempoPropagacion from "./componentes/PanelTiempoPropagacion";
+import PanelDecisiones from "./componentes/PanelDecisiones";
+import { generarInformeIncendio } from "../historial/informe_incendio";
+import VisorInforme from "../historial/VisorInforme";
+import "./estilos/Monitoreo.css";
+
+export default function Monitoreo() {
+  const { usuario } = useAuth();
+  const { escenarioId, foco, seleccionarFoco, seleccionarEscenario } = useEscenario();
+
+  const [fondo, setFondo] = useState("satelite");
+  const [mapa, setMapa] = useState(null);
+  const onMapReady = useCallback((m) => setMapa(m), []);
+
+  const [grid, setGrid] = useState([]);
+  const [capaActiva, setCapaActiva] = useState(3);
+  const [modoClic, setModoClic] = useState(false);
+  const [historicos, setHistoricos] = useState([]);
+  const [mostrarHistoricos, setMostrarHistoricos] = useState(true);
+
+  const [focosFirms, setFocosFirms] = useState([]);
+  const [firmsCargando, setFirmsCargando] = useState(false);
+  const [firmsError, setFirmsError] = useState(null);
+
+  const [verificacion, setVerificacion] = useState(null);
+
+  // --- Parámetros automáticos y fuentes vivas ---
+  const [auto, setAuto] = useState(null);          // { parametros, diagnostico, nivel, ... }
+  const [estadoAuto, setEstadoAuto] = useState("vacio");
+  const [terreno, setTerreno] = useState(null);    // OSM
+  const [dem, setDem] = useState(null);            // Map celda_id → metros
+  const [calibracion, setCalibracion] = useState(() => leerCalibracion());
+  const [progresoCalibracion, setProgresoCalibracion] = useState(null);
+  const [metadatosMotor, setMetadatosMotor] = useState(null);
+
+  const [simulacion, setSimulacion] = useState(null);
+  const [indice, setIndice] = useState(0);
+  const [reproduciendo, setReproduciendo] = useState(false);
+  const timer = useRef(null);
+
+  const [tiempoProp, setTiempoProp] = useState(null);
+  const [comparacionHist, setComparacionHist] = useState(null);
+  const [escenarioCompleto, setEscenarioCompleto] = useState(null);
+
+  const [alertasActivas, setAlertasActivas] = useState([]);
+  const [alertasHistorial, setAlertasHistorial] = useState([]);
+  const [mostrarHistorialAlertas, setMostrarHistorialAlertas] = useState(false);
+  const [puntosGrafica, setPuntosGrafica] = useState([]);
+  const [cargando, setCargando] = useState(false);
+
+  const puedeSimular = usuario?.rol === "analista" || usuario?.rol === "ugr";
+  const pasoCapa = 2;
+
+  useEffect(() => {
+    cargarGrid().then((g) => setGrid(g));
+    historicosApi.listar().then(({ data }) => setHistoricos(data));
+  }, []);
+
+  // --- Carga de la Capa 1 (terreno real) una sola vez ---
+  useEffect(() => {
+    if (grid.length === 0) return;
+    cargarTerrenoOsm(grid)
+      .then((t) => setTerreno(t))
+      .catch((e) => console.warn("Capa 1 (OSM) no disponible:", e.message));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grid.length]);
+
+  // --- Derivación automática de los parámetros ---
+  const refrescarAuto = useCallback(async () => {
+    if (grid.length === 0) return;
+    setEstadoAuto("cargando");
+    try {
+      const resultado = await derivarParametros(grid, { foco, historicos });
+      setAuto(resultado);
+      // El DEM se descarga en la ventana alrededor del foco elegido
+      const alturas = await cargarDem(grid, {
+        fila: resultado.parametros.foco_fila,
+        columna: resultado.parametros.foco_columna,
+      }, { radio: 20 });
+      setDem(alturas);
+      setEstadoAuto("listo");
+    } catch (e) {
+      console.error(e);
+      setAuto({ diagnostico: [], errorMeteo: e.message });
+      setEstadoAuto("error");
+    }
+  }, [grid, foco, historicos]);
+
+  useEffect(() => {
+    if (grid.length > 0 && !auto) refrescarAuto();
+  }, [grid.length, auto, refrescarAuto]);
+
+  // Si el usuario cambia el foco a mano, se recalculan las decisiones
+  useEffect(() => {
+    if (foco && grid.length > 0) refrescarAuto();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [foco?.fila, foco?.columna]);
+
+  function ejecutarVerificacion(lat, lon) {
+    if (grid.length === 0) return;
+    setVerificacion(verificarProbabilidadIncendio(lat, lon, grid, historicos));
+  }
+
+  function cargarFirms(forzar = false) {
+    if (!apiKeyConfigurada()) {
+      setFirmsError("Configura tu API key en src/local/nasa_firms_config.js");
+      return;
+    }
+    setFirmsCargando(true);
+    setFirmsError(null);
+    cargarFocosFirmsEnVivo({ forzar })
+      .then((focos) => setFocosFirms(focos))
+      .catch((e) => setFirmsError(e.message))
+      .finally(() => setFirmsCargando(false));
+  }
+
+  useEffect(() => {
+    if (capaActiva === 3 && focosFirms.length === 0 && !firmsError && apiKeyConfigurada()) {
+      cargarFirms(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [capaActiva]);
+
+  function ponerFoco(lat, lon, zoom = 13) {
+    const celda = celdaMasCercana(grid, lat, lon);
+    if (!celda) return;
+    seleccionarFoco(celda);
+    setModoClic(false);
+    ejecutarVerificacion(celda.lat, celda.lon);
+    if (mapa) mapa.flyTo([celda.lat, celda.lon], zoom, { duration: 1.4 });
+  }
+  const usarFocoFirms = (f) => ponerFoco(f.lat, f.lon);
+  const usarFocoHistorico = (ev) => ponerFoco(ev.foco.lat, ev.foco.lon, 12);
+
+  // ---- Ejecutar la simulación con TODO lo derivado automáticamente ----
+  async function ejecutarSimulacion() {
+    if (!auto?.parametros) return;
+    setCargando(true);
+    try {
+      const { data } = await simulacionLocal.ejecutar(
+        { ...auto.parametros, diagnostico: auto.diagnostico },
+        {
+          elevacion: dem,
+          barrerasExtra: terreno?.barreras || null,
+          serieViento: auto.parametros.serie_viento,
+          constantes: calibracion?.constantes || null,
+        }
+      );
+      setMetadatosMotor(data.iteraciones?.metadatos ? {
+        usa_dem: data.iteraciones.metadatos.usa_dem,
+        celdas_con_dem: data.iteraciones.metadatos.celdas_con_dem,
+        usa_serie_viento: data.iteraciones.metadatos.usa_serie_viento,
+        barreras_osm: data.iteraciones.metadatos.barreras_osm,
+        saltos_spotting: data.iteraciones.metadatos.eventos_spotting.length,
+      } : null);
+      seleccionarEscenario(data.escenario_id);
+      setCapaActiva(4);
+      registrarBitacora(usuario?.nombre || "analista", "Ejecutó simulación",
+        `${auto.parametros.nombre_escenario}`, "sim");
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  // ---- Calibración automática de las constantes K ----
+  async function ejecutarCalibracion() {
+    setProgresoCalibracion(0);
+    try {
+      const focos = await cargarFocos();
+      const resultado = await calibrar(grid, focos, {
+        elevacion: dem,
+        barrerasExtra: terreno?.barreras || null,
+        onProgreso: (f) => setProgresoCalibracion(f),
+      });
+      setCalibracion(resultado);
+      registrarBitacora(usuario?.nombre || "analista", "Calibró constantes K",
+        `F1 = ${(resultado.f1 * 100).toFixed(1)}%`, "sim");
+      await refrescarAuto();
+    } catch (e) {
+      console.error("Calibración fallida:", e);
+    } finally {
+      setProgresoCalibracion(null);
+    }
+  }
+
+  useEffect(() => {
+    if (!escenarioId) {
+      setSimulacion(null); setAlertasActivas([]); setAlertasHistorial([]);
+      setPuntosGrafica([]); setTiempoProp(null); setComparacionHist(null);
+      return;
+    }
+    setCargando(true);
+    Promise.all([
+      monitoreoApi.simulacion(escenarioId),
+      monitoreoApi.alertasActivas(escenarioId),
+      monitoreoApi.alertasHistorial(escenarioId),
+      monitoreoApi.graficaPropagacion(escenarioId),
+      escenariosLocal.obtenerCompleto(escenarioId),
+    ]).then(([sim, activas, historial, grafica, completo]) => {
+      setSimulacion(sim.data);
+      setIndice(0);
+      setAlertasActivas(activas.data);
+      setAlertasHistorial(historial.data);
+      setPuntosGrafica(grafica.data);
+
+      const esc = completo.data;
+      setEscenarioCompleto(esc);
+      if (esc.metadatos_motor) setMetadatosMotor(esc.metadatos_motor);
+      const tiempo = calcularTiempoPropagacion(esc, new Date());
+      setTiempoProp(tiempo);
+
+      if (esc.foco_coordenadas && esc.variables_promedio) {
+        compararConHistoricos({ foco: esc.foco_coordenadas, variables: esc.variables_promedio })
+          .then((ranking) => {
+            if (ranking && ranking[0] && tiempo) {
+              setComparacionHist(compararConHistoricoTiempo(tiempo, ranking[0].evento));
+            }
+          });
+      }
+    }).finally(() => setCargando(false));
+  }, [escenarioId]);
+
+  useEffect(() => {
+    if (!reproduciendo || !simulacion) return;
+    timer.current = setInterval(() => {
+      setIndice((i) => {
+        if (i >= simulacion.iteraciones.length - 1) { setReproduciendo(false); return i; }
+        return i + 1;
+      });
+    }, 500);
+    return () => clearInterval(timer.current);
+  }, [reproduciendo, simulacion]);
+
+  const [informeVisor, setInformeVisor] = useState(null);
+  function generarReporte() {
+    if (escenarioCompleto) {
+      const html = generarInformeIncendio(escenarioCompleto);
+      setInformeVisor({ html, nombre: escenarioCompleto.nombre });
+    }
+  }
+
+  const iteracion = simulacion?.iteraciones?.[indice];
+  const enCapasProbabilidad = capaActiva === 2 || capaActiva === 3;
+
+  // Color de la Capa 1 con el terreno real de OSM encima de la topografía base
+  const colorCapa1 = (c) => {
+    const clase = terreno?.clases?.get(c.id);
+    if (clase === "rio" || clase === "agua") return "#2f6fd0";
+    if (clase === "quebrada") return "#4a9fd8";
+    if (clase === "camino") return "#b9b0a0";
+    return colorTopografia(c).color;
+  };
+
+  return (
+    <div className="monitoreo-pantalla">
+      {/* ---------- BARRA HORIZONTAL SUPERIOR (antes columna lateral) ---------- */}
+      <div className="monitoreo-barra">
+        <PanelRadar verificacion={verificacion} grid={grid}
+          foco={foco} onEjecutar={ejecutarSimulacion} puedeSimular={puedeSimular} />
+        <PanelAlertas activas={alertasActivas} historial={alertasHistorial}
+          mostrarHistorial={mostrarHistorialAlertas} setMostrarHistorial={setMostrarHistorialAlertas} />
+        <PanelGrafica puntos={puntosGrafica} />
+      </div>
+
+      {/* ---------- CUERPO: mapa grande + decisiones a la derecha ---------- */}
+      <div className="monitoreo-cuerpo">
+        <div className="panel monitoreo-mapa-panel">
+
+          <div className="monitoreo-controles">
+            <SelectorCapas capaActiva={capaActiva} setCapaActiva={setCapaActiva} />
+            <div className="monitoreo-controles-derecha">
+              <SelectorEscenario compacto />
+              <div className="monitoreo-fondo-selector">
+                {Object.entries(FONDOS).map(([key, cfg]) => (
+                  <button key={key} className={`monitoreo-fondo-btn${fondo === key ? " activo" : ""}`}
+                    onClick={() => setFondo(key)}>{cfg.label}</button>
+                ))}
+              </div>
+              <button className={`btn btn--mini${modoClic ? " btn--primary" : ""}`}
+                onClick={() => setModoClic((v) => !v)} title="Marcar el foco con un clic en el mapa">
+                {modoClic ? "Clic activo" : "Marcar foco"}
+              </button>
+              <button className={`btn btn--mini${mostrarHistoricos ? " btn--primary" : ""}`}
+                onClick={() => setMostrarHistoricos((v) => !v)}>Históricos</button>
+              {capaActiva === 3 && (
+                <button className="btn btn--mini" onClick={() => cargarFirms(true)} disabled={firmsCargando}>
+                  {firmsCargando ? "…" : "↻ FIRMS"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="monitoreo-mapa-contenedor">
+            <BaseMap fondo={fondo} onMapReady={onMapReady} style={{ height: "100%" }}>
+              <LimiteMunicipio visible={true} />
+
+              {grid.length > 0 && capaActiva === 1 && (
+                <CapaColoreada celdas={grid} colorDe={colorCapa1} opacidad={0.55} paso={pasoCapa} />
+              )}
+              {grid.length > 0 && capaActiva === 2 && (
+                <CapaColoreada celdas={grid} colorDe={(c) => colorAmbiental(c).color} opacidad={0.5} paso={pasoCapa} />
+              )}
+              {capaActiva === 3 && focosFirms.length > 0 && (
+                <CapaFocosFirms focos={focosFirms} onSeleccionarFoco={puedeSimular ? usarFocoFirms : null} />
+              )}
+              {grid.length > 0 && (capaActiva === 4 || capaActiva === 5) && (
+                <CapaColoreada celdas={grid} colorDe={(c) => colorProbabilidad(c.prob_ignicion)} opacidad={0.3} paso={pasoCapa} />
+              )}
+
+              {(capaActiva === 4 || capaActiva === 5) && iteracion && <CapaPropagacion celdas={iteracion.celdas} />}
+
+              {capaActiva !== 5 && <MarcadorFoco foco={foco} />}
+              <CapturadorClic activo={modoClic} onClic={(lat, lon) => ponerFoco(lat, lon)} />
+
+              {enCapasProbabilidad && verificacion && <NotificacionProbabilidad verificacion={verificacion} />}
+
+              {mostrarHistoricos && historicos.length > 0 && (
+                <MarcadoresHistoricos eventos={historicos} onUsarComoFoco={puedeSimular ? usarFocoHistorico : null} />
+              )}
+            </BaseMap>
+          </div>
+
+          <div className="monitoreo-pie">
+            <LeyendaCapa capaActiva={capaActiva} />
+
+            {(capaActiva === 4 || capaActiva === 5) && simulacion && iteracion && (
+              <div className="monitoreo-transporte">
+                <button className="btn btn--primary btn--mini" onClick={() => setReproduciendo((r) => !r)}>
+                  {reproduciendo ? "❚❚" : "▶"}
+                </button>
+                <input type="range" min={0} max={simulacion.iteraciones.length - 1}
+                  value={indice} onChange={(e) => { setReproduciendo(false); setIndice(Number(e.target.value)); }}
+                  className="monitoreo-slider" />
+                <span className="mono monitoreo-transporte-info">
+                  iter {iteracion.iteracion}/{simulacion.iteraciones.length - 1}
+                  {iteracion.viento && ` · viento ${iteracion.viento.velocidad_ms} m/s`}
+                </span>
+                <span className="mono monitoreo-metrica-inline" style={{ color: "var(--estado-ardiendo)" }}>
+                  {iteracion.num_celdas_ardiendo} ardiendo
+                </span>
+                <span className="mono monitoreo-metrica-inline" style={{ color: "var(--estado-quemada)" }}>
+                  {(iteracion.num_celdas_quemadas * 25).toLocaleString()} ha
+                </span>
+              </div>
+            )}
+
+            {capaActiva === 5 && (
+              <PanelTiempoPropagacion tiempo={tiempoProp} comparacionHist={comparacionHist}
+                onGenerarReporte={escenarioCompleto ? generarReporte : null} />
+            )}
+
+            {capaActiva === 3 && firmsError && (
+              <div className="monitoreo-aviso">{firmsError}</div>
+            )}
+            {cargando && <span className="text-muted" style={{ fontSize: 12 }}>Cargando…</span>}
+          </div>
+        </div>
+
+        <PanelDecisiones
+          estado={estadoAuto}
+          diagnostico={auto?.diagnostico}
+          parametros={auto?.parametros}
+          nivel={auto?.nivel}
+          errorMeteo={auto?.errorMeteo}
+          terreno={terreno?.resumen}
+          dem={estadisticasDem(dem)}
+          calibracion={calibracion}
+          metadatosMotor={metadatosMotor}
+          onRefrescar={refrescarAuto}
+          onEjecutar={ejecutarSimulacion}
+          onCalibrar={ejecutarCalibracion}
+          progresoCalibracion={progresoCalibracion}
+          puedeSimular={puedeSimular}
+          simulando={cargando}
+        />
+      </div>
+
+      {informeVisor && (
+        <VisorInforme html={informeVisor.html} nombre={informeVisor.nombre} onCerrar={() => setInformeVisor(null)} />
+      )}
+    </div>
+  );
+}

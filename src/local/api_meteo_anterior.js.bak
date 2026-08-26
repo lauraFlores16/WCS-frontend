@@ -1,0 +1,315 @@
+// ============================================================================
+// CAPA 2 — VARIABLES AMBIENTALES EN TIEMPO REAL (Open-Meteo)
+// ============================================================================
+// Sustituye los promedios ERA5 congelados de grid.csv por datos que se
+// actualizan solos. Open-Meteo NO pide API key, responde JSON con CORS abierto
+// y permite ~10.000 peticiones/día en uso no comercial (licencia CC BY 4.0).
+//
+//   GET https://api.open-meteo.com/v1/forecast
+//       ?latitude=..&longitude=..
+//       &current=temperature_2m,relative_humidity_2m,wind_speed_10m,...
+//       &hourly=...&past_days=1&forecast_days=3
+//
+// Qué aporta a SIPRO:
+//   · Temperatura, humedad relativa y viento REALES → autocompletan los
+//     sliders del Panel de control (ver parametros_auto.js).
+//   · Serie horaria de viento → alimenta la MEJORA 2 del autómata (viento
+//     variable en el tiempo).
+//   · VPD, evapotranspiración, humedad de suelo y días sin lluvia →
+//     sequedad del combustible, mucho mejor indicador que la humedad del aire.
+//   · Ráfagas → alimentan el spotting (MEJORA 4).
+// ============================================================================
+
+const BASE = "https://api.open-meteo.com/v1/forecast";
+
+// Bounding box del municipio de Apolo (Franz Tamayo, La Paz).
+export const APOLO = { lat: -14.65, lon: -68.25 };
+
+const VARS_ACTUALES = [
+  "temperature_2m",
+  "relative_humidity_2m",
+  "wind_speed_10m",
+  "wind_direction_10m",
+  "wind_gusts_10m",
+  "precipitation",
+  "surface_pressure",
+].join(",");
+
+const VARS_HORARIAS = [
+  "temperature_2m",
+  "relative_humidity_2m",
+  "wind_speed_10m",
+  "wind_direction_10m",
+  "wind_gusts_10m",
+  "precipitation",
+  "vapour_pressure_deficit",
+  "et0_fao_evapotranspiration",
+  "soil_moisture_0_to_1cm",
+  "soil_temperature_0cm",
+].join(",");
+
+const CACHE_MS = 15 * 60 * 1000; // el modelo se refresca cada hora; 15 min basta
+const _cache = new Map();
+
+function claveCache(lat, lon) {
+  return `${lat.toFixed(3)},${lon.toFixed(3)}`;
+}
+
+// Viento meteorológico → componentes u (este) y v (norte), en m/s.
+// La dirección de Open-Meteo es "de dónde viene" (convención meteorológica).
+export function direccionAComponentes(velocidadKmh, direccionGrados) {
+  const vel = (velocidadKmh ?? 0) / 3.6;
+  const rad = ((direccionGrados ?? 0) * Math.PI) / 180;
+  return { u: -vel * Math.sin(rad), v: -vel * Math.cos(rad), velocidad_ms: vel };
+}
+
+/**
+ * Trae el estado meteorológico actual + la serie horaria para un punto.
+ * @param {number} lat
+ * @param {number} lon
+ * @param {Object} opciones { forzar, horasAdelante }
+ */
+export async function obtenerMeteorologia(lat = APOLO.lat, lon = APOLO.lon, opciones = {}) {
+  const { forzar = false, horasAdelante = 48 } = opciones;
+  const clave = claveCache(lat, lon);
+  const guardado = _cache.get(clave);
+  if (!forzar && guardado && Date.now() - guardado.ts < CACHE_MS) return guardado.datos;
+
+  const url =
+    `${BASE}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}` +
+    `&current=${VARS_ACTUALES}&hourly=${VARS_HORARIAS}` +
+    `&past_days=2&forecast_days=3&timezone=America%2FLa_Paz`;
+
+  const respuesta = await fetch(url);
+  if (!respuesta.ok) {
+    const texto = await respuesta.text();
+    throw new Error(`Open-Meteo respondió ${respuesta.status}: ${texto.slice(0, 200)}`);
+  }
+  const json = await respuesta.json();
+  if (json.error) throw new Error(`Open-Meteo: ${json.reason}`);
+
+  const datos = normalizar(json, horasAdelante);
+  _cache.set(clave, { ts: Date.now(), datos });
+  return datos;
+}
+
+function normalizar(json, horasAdelante) {
+  const c = json.current || {};
+  const h = json.hourly || {};
+  const tiempos = h.time || [];
+
+  // Índice de la hora actual dentro de la serie (se pidió past_days=2).
+  const ahoraIso = (c.time || new Date().toISOString()).slice(0, 13);
+  let iAhora = tiempos.findIndex((t) => t.slice(0, 13) === ahoraIso);
+  if (iAhora < 0) iAhora = Math.max(0, tiempos.length - 72);
+
+  const actualViento = direccionAComponentes(c.wind_speed_10m, c.wind_direction_10m);
+
+  // --- Serie de viento para el autómata (MEJORA 2) ---
+  const serieViento = [];
+  for (let i = iAhora; i < Math.min(iAhora + horasAdelante, tiempos.length); i++) {
+    const comp = direccionAComponentes(h.wind_speed_10m?.[i], h.wind_direction_10m?.[i]);
+    serieViento.push({
+      hora: tiempos[i],
+      u: comp.u,
+      v: comp.v,
+      velocidad_ms: comp.velocidad_ms,
+      rafaga_ms: (h.wind_gusts_10m?.[i] ?? 0) / 3.6,
+      direccion_grados: h.wind_direction_10m?.[i] ?? null,
+    });
+  }
+
+  // --- Serie ambiental (para graficar la Capa 2 en el tiempo) ---
+  const serieAmbiental = [];
+  for (let i = iAhora; i < Math.min(iAhora + horasAdelante, tiempos.length); i++) {
+    serieAmbiental.push({
+      hora: tiempos[i],
+      temperatura_c: h.temperature_2m?.[i] ?? null,
+      humedad_relativa: h.relative_humidity_2m?.[i] ?? null,
+      vpd_kpa: h.vapour_pressure_deficit?.[i] ?? null,
+      precipitacion_mm: h.precipitation?.[i] ?? null,
+      humedad_suelo: h.soil_moisture_0_to_1cm?.[i] ?? null,
+      viento_ms: (h.wind_speed_10m?.[i] ?? 0) / 3.6,
+    });
+  }
+
+  // --- Sequedad acumulada: horas sin lluvia y lluvia de las últimas 48 h ---
+  let horasSinLluvia = 0;
+  for (let i = iAhora; i >= 0; i--) {
+    if ((h.precipitation?.[i] ?? 0) > 0.1) break;
+    horasSinLluvia++;
+  }
+  let lluvia48h = 0;
+  for (let i = Math.max(0, iAhora - 48); i <= iAhora; i++) lluvia48h += h.precipitation?.[i] ?? 0;
+
+  return {
+    fuente: "Open-Meteo (best_match: ECMWF/GFS/ICON)",
+    consultado: new Date().toISOString(),
+    coordenadas: { lat: json.latitude, lon: json.longitude },
+    elevacion_m: json.elevation ?? null,
+    actual: {
+      hora: c.time,
+      temperatura_c: c.temperature_2m ?? null,
+      humedad_relativa: c.relative_humidity_2m != null ? c.relative_humidity_2m / 100 : null,
+      viento_ms: actualViento.velocidad_ms,
+      viento_kmh: c.wind_speed_10m ?? null,
+      viento_direccion: c.wind_direction_10m ?? null,
+      viento_u: actualViento.u,
+      viento_v: actualViento.v,
+      rafaga_ms: (c.wind_gusts_10m ?? 0) / 3.6,
+      precipitacion_mm: c.precipitation ?? 0,
+      vpd_kpa: h.vapour_pressure_deficit?.[iAhora] ?? null,
+      humedad_suelo: h.soil_moisture_0_to_1cm?.[iAhora] ?? null,
+    },
+    sequedad: {
+      horas_sin_lluvia: horasSinLluvia,
+      lluvia_48h_mm: +lluvia48h.toFixed(2),
+    },
+    serieViento,
+    serieAmbiental,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// CLIMATOLOGÍA DE REFERENCIA (ERA5, Historical Weather API)
+// ---------------------------------------------------------------------------
+// Los sliders del Panel de control son ANOMALÍAS ("Δ respecto al promedio").
+// Para calcularlas solas hace falta saber cuál es ese promedio. Aquí se traen
+// los últimos 5 años del MISMO mes y se promedian: esa es la referencia contra
+// la que se mide si hoy hace más calor o hay menos humedad de lo normal.
+// Se cachea en localStorage 30 días (la climatología no cambia de un día a otro).
+// ---------------------------------------------------------------------------
+const URL_ARCHIVO = "https://archive-api.open-meteo.com/v1/archive";
+const CLAVE_CLIMA = "sipro_climatologia";
+const CLIMA_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
+export async function obtenerClimatologia(lat = APOLO.lat, lon = APOLO.lon, opciones = {}) {
+  const { forzar = false, anios = 5 } = opciones;
+  const mes = new Date().getMonth() + 1;
+  const clave = `${CLAVE_CLIMA}_${lat.toFixed(2)}_${lon.toFixed(2)}_${mes}`;
+
+  if (!forzar) {
+    try {
+      const guardado = JSON.parse(localStorage.getItem(clave) || "null");
+      if (guardado && Date.now() - guardado.ts < CLIMA_TTL_MS) return guardado.datos;
+    } catch { /* cache corrupta: se vuelve a pedir */ }
+  }
+
+  const hoy = new Date();
+  const acumulado = { t: 0, hr: 0, v: 0, n: 0 };
+
+  for (let k = 1; k <= anios; k++) {
+    const anio = hoy.getFullYear() - k;
+    const ini = `${anio}-${String(mes).padStart(2, "0")}-01`;
+    const fin = `${anio}-${String(mes).padStart(2, "0")}-28`;
+    const url =
+      `${URL_ARCHIVO}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}` +
+      `&start_date=${ini}&end_date=${fin}` +
+      `&hourly=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=America%2FLa_Paz`;
+    try {
+      const r = await fetch(url);
+      if (!r.ok) continue;
+      const j = await r.json();
+      const h = j.hourly || {};
+      const n = (h.time || []).length;
+      for (let i = 0; i < n; i++) {
+        if (h.temperature_2m?.[i] == null) continue;
+        acumulado.t += h.temperature_2m[i];
+        acumulado.hr += h.relative_humidity_2m?.[i] ?? 0;
+        acumulado.v += (h.wind_speed_10m?.[i] ?? 0) / 3.6;
+        acumulado.n++;
+      }
+    } catch (e) {
+      console.warn(`Climatología ${anio} no disponible:`, e.message);
+    }
+  }
+
+  if (acumulado.n === 0) return null;
+
+  const datos = {
+    mes,
+    anios_usados: anios,
+    horas: acumulado.n,
+    temperatura_c: +(acumulado.t / acumulado.n).toFixed(2),
+    humedad_relativa: +(acumulado.hr / acumulado.n / 100).toFixed(4),
+    viento_ms: +(acumulado.v / acumulado.n).toFixed(3),
+    fuente: "ERA5 (Open-Meteo Historical Weather API)",
+  };
+
+  try { localStorage.setItem(clave, JSON.stringify({ ts: Date.now(), datos })); } catch { /* cuota */ }
+  return datos;
+}
+
+// ---------------------------------------------------------------------------
+// SERIE HISTÓRICA DE VIENTO (para calibrar contra eventos pasados)
+// ---------------------------------------------------------------------------
+// La calibración compara el motor contra los incendios de 2021/2023/2024. Sin
+// el viento REAL de esas fechas, el modelo acierta el área pero no la dirección.
+// Esta función trae la serie horaria ERA5 del episodio concreto y se la pasa al
+// autómata como `serieViento`, igual que se hace en tiempo real.
+// ---------------------------------------------------------------------------
+export async function obtenerSerieVientoHistorica(lat, lon, fechaInicio, fechaFin) {
+  const clave = `sipro_viento_hist_${lat.toFixed(2)}_${lon.toFixed(2)}_${fechaInicio}_${fechaFin}`;
+  try {
+    const guardado = JSON.parse(localStorage.getItem(clave) || "null");
+    if (guardado) return guardado;
+  } catch { /* cache corrupta */ }
+
+  const url =
+    `${URL_ARCHIVO}?latitude=${lat.toFixed(4)}&longitude=${lon.toFixed(4)}` +
+    `&start_date=${fechaInicio}&end_date=${fechaFin}` +
+    `&hourly=wind_speed_10m,wind_direction_10m,temperature_2m,relative_humidity_2m` +
+    `&timezone=America%2FLa_Paz`;
+
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Archivo ERA5 respondió ${r.status}`);
+  const j = await r.json();
+  const h = j.hourly || {};
+  const serie = (h.time || []).map((t, i) => {
+    const comp = direccionAComponentes(h.wind_speed_10m?.[i], h.wind_direction_10m?.[i]);
+    return {
+      hora: t, u: comp.u, v: comp.v, velocidad_ms: comp.velocidad_ms,
+      temperatura_c: h.temperature_2m?.[i] ?? null,
+      humedad_relativa: h.relative_humidity_2m?.[i] != null ? h.relative_humidity_2m[i] / 100 : null,
+    };
+  });
+
+  try { localStorage.setItem(clave, JSON.stringify(serie)); } catch { /* cuota */ }
+  return serie;
+}
+
+// ---------------------------------------------------------------------------
+// Índice de peligro tipo 30-30-30, ahora con datos REALES (ya no relativos).
+// Devuelve 0..1 y el detalle de qué condición se cumple.
+// ---------------------------------------------------------------------------
+export function indicePeligro(meteo) {
+  if (!meteo) return null;
+  const a = meteo.actual;
+  const t = a.temperatura_c ?? 0;
+  const hr = (a.humedad_relativa ?? 0.5) * 100;
+  const vKmh = a.viento_kmh ?? 0;
+
+  const fT = Math.min(Math.max((t - 15) / (30 - 15), 0), 1);
+  const fH = Math.min(Math.max((45 - hr) / (45 - 30), 0), 1);
+  const fV = Math.min(Math.max(vKmh / 30, 0), 1);
+  // Bonus por sequedad acumulada (días sin lluvia)
+  const fS = Math.min(meteo.sequedad.horas_sin_lluvia / 168, 1); // 1 semana = 1.0
+
+  const puntaje = 0.3 * fT + 0.3 * fH + 0.25 * fV + 0.15 * fS;
+
+  return {
+    puntaje: Math.min(Math.max(puntaje, 0), 1),
+    condiciones: {
+      temperatura: { valor: t, umbral: 30, cumple: t >= 30, factor: fT },
+      humedad: { valor: hr, umbral: 30, cumple: hr <= 30, factor: fH },
+      viento: { valor: vKmh, umbral: 30, cumple: vKmh >= 30, factor: fV },
+      sequedad: {
+        valor: meteo.sequedad.horas_sin_lluvia,
+        umbral: 168,
+        cumple: meteo.sequedad.horas_sin_lluvia >= 168,
+        factor: fS,
+      },
+    },
+    regla_303030: [t >= 30, hr <= 30, vKmh >= 30].filter(Boolean).length,
+  };
+}

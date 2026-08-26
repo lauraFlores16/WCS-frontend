@@ -1,0 +1,99 @@
+import { NavLink } from "react-router-dom";
+import { useAuth } from "./AuthContext";
+import { usePermisos } from "./PermisosContext";
+import "./estilos/AppShell.css";
+
+// Pantallas todavía sin ruta en el backend. Cuando /api/reportes exista,
+// quita la entrada de esta lista y aparecerá en el menú.
+const PANTALLAS_SIN_BACKEND = ["reportes"];
+
+const ITEMS = [
+  { to: "/inicio", label: "Inicio", pantalla: "inicio", icon: "home" },
+  { to: "/usuarios", label: "Módulo 1 — Gestión de usuarios", pantalla: "gestionUsuarios", icon: "users" },
+  { to: "/roles", label: "Roles y permisos", pantalla: "gestionUsuarios", icon: "shield" },
+  { to: "/configuracion", label: "Configuración", pantalla: "configuracion", icon: "settings" },
+  { to: "/bitacora", label: "Bitácora", pantalla: "bitacora", icon: "log" },
+  { to: "/datos-espaciales", label: "P1·P2 — Datos espaciales", pantalla: "datosEspaciales", icon: "layers" },
+  { to: "/monitoreo", label: "P3·P4·P6 — Monitoreo", pantalla: "monitoreo", icon: "map" },
+  { to: "/simulacion", label: "Simulación de autómatas", pantalla: "simulacion", icon: "play" },
+  { to: "/panel-control", label: "P5 — Panel de control", pantalla: "panelControl", icon: "sliders" },
+  { to: "/historial", label: "Historial de escenarios", pantalla: "historialEscenarios", icon: "history" },
+  { to: "/comparacion", label: "Comparación histórica", pantalla: "comparacion", icon: "compare" },
+];
+
+const ICONS = {
+  home: "M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z M9 22V12h6v10",
+  play: "M5 3l14 9-14 9V3z",
+  shield: "M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z",
+  settings: "M12 15a3 3 0 100-6 3 3 0 000 6zM19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z",
+  log: "M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8zM14 2v6h6M16 13H8M16 17H8M10 9H8",
+  compare: "M9 3v18M15 3v18M4 7h4M4 12h4M4 17h4M16 7h4M16 12h4M16 17h4",
+  layers: "M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5",
+  map: "M9 20l-6-3V4l6 3 6-3 6 3v13l-6-3-6 3zM9 4v13M15 7v13",
+  bell: "M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 01-3.4 0",
+  chart: "M4 20V10M11 20V4M18 20v-7",
+  flame: "M12 2s5 4.5 5 10a5 5 0 01-10 0c0-1.5.8-2.6 1.5-3.5.3 1 1 1.5 1.5 1.5-.3-2 .5-4 2-6z",
+  target: "M12 2v4M12 18v4M2 12h4M18 12h4M12 8a4 4 0 100 8 4 4 0 000-8z",
+  sliders: "M4 6h10M18 6h2M4 12h2M8 12h12M4 18h14M20 18h0 M6 4v4M16 10v4M6 16v4",
+  history: "M3 12a9 9 0 109-9 9 9 0 00-7 3.2M3 4v5h5M12 7v5l4 2",
+  file: "M6 2h9l5 5v15H6zM15 2v5h5M9 13h6M9 17h6",
+  users: "M17 21v-2a4 4 0 00-4-4H7a4 4 0 00-4 4v2M11 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75",
+};
+
+function Icon({ name }) {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={ICONS[name]} />
+    </svg>
+  );
+}
+
+export default function Sidebar() {
+  const { usuario, logout } = useAuth();
+  const { puedeVerPantalla } = usePermisos();
+
+  return (
+    <aside className="sidebar">
+      <div className="sidebar-marca">
+        <img src="/sipro_simbolo.png" alt="SISPROP" className="sidebar-simbolo"
+          onError={(e) => { e.target.style.display = "none"; }} />
+        <div className="sidebar-marca-texto">
+          <div className="sidebar-marca-nombre">SISPROP</div>
+          <div className="sidebar-marca-sub">Prevención y simulación de incendios</div>
+        </div>
+      </div>
+
+      <nav className="sidebar-nav">
+        {ITEMS.filter((item) => {
+          if (PANTALLAS_SIN_BACKEND.includes(item.pantalla)) return false;
+          // Roles y permisos solo lo ve quien puede gestionar usuarios (admin).
+          if (item.to === "/roles") return puedeVerPantalla("gestionUsuarios");
+          // El acceso lo decide la matriz de permisos, no el rol fijo.
+          return puedeVerPantalla(item.pantalla);
+        }).map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            className={({ isActive }) => `sidebar-link${isActive ? " activo" : ""}`}
+          >
+            <Icon name={item.icon} />
+            {item.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="sidebar-pie">
+        <div className="sidebar-usuario-nombre">{usuario?.nombre}</div>
+        <div className="sidebar-usuario-rol mono">{usuario?.rol}</div>
+        <button className="btn" style={{ width: "100%" }} onClick={logout}>Cerrar sesión</button>
+        <div className="sidebar-wcs">
+          <span className="sidebar-wcs-label">Un proyecto apoyado por</span>
+          <img src="/wcs_horizontal.png" alt="Wildlife Conservation Society"
+            className="sidebar-wcs-logo"
+            onError={(e) => { e.target.style.display = "none"; }} />
+        </div>
+      </div>
+    </aside>
+  );
+}

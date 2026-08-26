@@ -1,0 +1,340 @@
+// ============================================================================
+// CAPA 1 — TOPOGRAFÍA E HIDROGRAFÍA REALES
+// ============================================================================
+// Dos fuentes públicas, sin API key, con CORS abierto:
+//
+//  A) ALTURA (DEM)  → https://api.open-meteo.com/v1/elevation
+//     Copernicus DEM GLO-90 (90 m). Acepta hasta 100 coordenadas por petición.
+//     Es lo que alimenta la MEJORA 1 del autómata: pendiente calculada como
+//     diferencia de altura ENTRE la celda que arde y la vecina.
+//
+//  B) HIDROGRAFÍA Y COBERTURA → https://overpass-api.de/api/interpreter
+//     OpenStreetMap: ríos, quebradas, lagunas, bosque, caminos. Ríos anchos y
+//     cuerpos de agua se convierten en BARRERAS del autómata; quebradas y
+//     caminos en resistencia parcial (cortafuegos naturales/antrópicos).
+//
+// Como el grid tiene 36.390 celdas y el DEM permite 100 por petición, el DEM
+// NO se descarga entero: se traen solo las celdas de una VENTANA alrededor del
+// foco (por defecto ±35 celdas ≈ 35 km), que es donde el fuego puede llegar.
+// Todo queda cacheado en localStorage para no repetir descargas.
+// ============================================================================
+
+const URL_ELEVACION = "https://api.open-meteo.com/v1/elevation";
+const URL_OVERPASS = "https://overpass-api.de/api/interpreter";
+
+const CLAVE_DEM = "sipro_dem_cache";
+const CLAVE_OSM = "sipro_osm_cache";
+const OSM_TTL_MS = 7 * 24 * 60 * 60 * 1000; // OSM cambia poco: 7 días
+
+// ---------------------------------------------------------------------------
+// Índice espacial del grid: permite pasar de (lat, lon) a la celda del grid.
+// El paso se deduce de los propios datos, no se hardcodea.
+// ---------------------------------------------------------------------------
+let _indice = null;
+
+export function construirIndiceGrid(grid) {
+  if (_indice && _indice.n === grid.length) return _indice;
+
+  let latMin = Infinity, latMax = -Infinity, lonMin = Infinity, lonMax = -Infinity;
+  let filaMin = Infinity, colMin = Infinity;
+  const porFilaCol = new Map();
+
+  for (const c of grid) {
+    if (c.lat < latMin) latMin = c.lat;
+    if (c.lat > latMax) latMax = c.lat;
+    if (c.lon < lonMin) lonMin = c.lon;
+    if (c.lon > lonMax) lonMax = c.lon;
+    if (c.fila < filaMin) filaMin = c.fila;
+    if (c.columna < colMin) colMin = c.columna;
+    porFilaCol.set(`${c.fila},${c.columna}`, c);
+  }
+
+  // Referencia: la celda de menor fila y menor columna que exista
+  let ref = null;
+  for (const c of grid) {
+    if (!ref || c.fila < ref.fila || (c.fila === ref.fila && c.columna < ref.columna)) ref = c;
+  }
+
+  // Paso angular: mediana de las diferencias entre latitudes/longitudes únicas
+  const paso = (valores) => {
+    const u = [...new Set(valores.map((v) => +v.toFixed(6)))].sort((a, b) => a - b);
+    const difs = [];
+    for (let i = 1; i < u.length; i++) difs.push(u[i] - u[i - 1]);
+    difs.sort((a, b) => a - b);
+    return difs[Math.floor(difs.length / 2)] || 0.0045;
+  };
+  const pasoLat = paso(grid.map((c) => c.lat));
+  const pasoLon = paso(grid.map((c) => c.lon));
+
+  _indice = {
+    n: grid.length, porFilaCol, ref, pasoLat, pasoLon,
+    latMin, latMax, lonMin, lonMax, filaMin, colMin,
+    bbox: { sur: latMin, norte: latMax, oeste: lonMin, este: lonMax },
+  };
+  return _indice;
+}
+
+// (lat, lon) → celda del grid, o null si cae fuera
+export function celdaEn(grid, lat, lon) {
+  const ix = construirIndiceGrid(grid);
+  // La latitud DECRECE al aumentar la fila
+  const fila = ix.ref.fila + Math.round((ix.ref.lat - lat) / ix.pasoLat);
+  const columna = ix.ref.columna + Math.round((lon - ix.ref.lon) / ix.pasoLon);
+  return ix.porFilaCol.get(`${fila},${columna}`) || null;
+}
+
+// ===========================================================================
+// A) DEM — alturas reales (Copernicus GLO-90 vía Open-Meteo)
+// ===========================================================================
+function leerCacheDem() {
+  try {
+    const crudo = localStorage.getItem(CLAVE_DEM);
+    if (!crudo) return new Map();
+    // Formato compacto "fila:columna=altura;" para no reventar la cuota
+    const m = new Map();
+    for (const par of crudo.split(";")) {
+      if (!par) continue;
+      const [k, v] = par.split("=");
+      m.set(k, +v);
+    }
+    return m;
+  } catch { return new Map(); }
+}
+
+function guardarCacheDem(m) {
+  try {
+    const partes = [];
+    for (const [k, v] of m) partes.push(`${k}=${Math.round(v)}`);
+    localStorage.setItem(CLAVE_DEM, partes.join(";"));
+  } catch (e) {
+    console.warn("No se pudo cachear el DEM (cuota de localStorage):", e.message);
+  }
+}
+
+/**
+ * Descarga las alturas de una ventana cuadrada alrededor del foco.
+ * @param {Array} grid
+ * @param {Object} foco { fila, columna }
+ * @param {Object} opciones { radio = 35, onProgreso }
+ * @returns {Map} celda_id → metros
+ */
+export async function cargarDem(grid, foco, opciones = {}) {
+  const { radio = 35, onProgreso = null } = opciones;
+  const ix = construirIndiceGrid(grid);
+  const cache = leerCacheDem();
+
+  // Celdas de la ventana que existen en el grid
+  const objetivo = [];
+  for (let f = foco.fila - radio; f <= foco.fila + radio; f++) {
+    for (let c = foco.columna - radio; c <= foco.columna + radio; c++) {
+      const celda = ix.porFilaCol.get(`${f},${c}`);
+      if (celda) objetivo.push(celda);
+    }
+  }
+
+  const faltantes = objetivo.filter((c) => !cache.has(`${c.fila}:${c.columna}`));
+  const LOTE = 100; // límite de la API
+  const total = Math.ceil(faltantes.length / LOTE);
+
+  for (let i = 0; i < faltantes.length; i += LOTE) {
+    const lote = faltantes.slice(i, i + LOTE);
+    const lats = lote.map((c) => c.lat.toFixed(5)).join(",");
+    const lons = lote.map((c) => c.lon.toFixed(5)).join(",");
+    try {
+      const r = await fetch(`${URL_ELEVACION}?latitude=${lats}&longitude=${lons}`);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const json = await r.json();
+      if (json.error) throw new Error(json.reason);
+      json.elevation.forEach((h, k) => {
+        if (Number.isFinite(h)) cache.set(`${lote[k].fila}:${lote[k].columna}`, h);
+      });
+    } catch (e) {
+      console.warn("Elevation API falló en un lote:", e.message);
+    }
+    if (onProgreso) onProgreso(Math.min(1, (i / LOTE + 1) / total));
+  }
+
+  guardarCacheDem(cache);
+
+  // Salida en el formato que espera el autómata: celda_id → metros
+  const salida = new Map();
+  for (const c of objetivo) {
+    const h = cache.get(`${c.fila}:${c.columna}`);
+    if (h != null) salida.set(c.id, h);
+  }
+  return salida;
+}
+
+// Estadísticas de relieve, para mostrarlas en la Capa 1
+export function estadisticasDem(dem) {
+  if (!dem || dem.size === 0) return null;
+  const vals = [...dem.values()];
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const media = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return { min, max, media: Math.round(media), celdas: dem.size, desnivel: Math.round(max - min) };
+}
+
+// ===========================================================================
+// B) OVERPASS — hidrografía, cobertura y caminos
+// ===========================================================================
+function consultaOverpass(bbox) {
+  const { sur, oeste, norte, este } = bbox;
+  const b = `${sur},${oeste},${norte},${este}`;
+  // Solo se piden los elementos que REALMENTE frenan el fuego. Pedir además
+  // bosque/pastizal/cultivo para el municipio entero (≈12.000 km²) devuelve
+  // decenas de MB, tumba la consulta y revienta la cuota de localStorage —
+  // y encima no aporta: esas coberturas no son barrera (resistencia 1.0),
+  // el combustible ya lo aporta el NDVI real del grid.
+  // out geom → devuelve la geometría de cada way sin pedir los nodos aparte.
+  return `
+[out:json][timeout:180];
+(
+  way["waterway"~"^(river|canal)$"](${b});
+  way["waterway"="stream"](${b});
+  way["natural"="water"](${b});
+  way["landuse"="reservoir"](${b});
+  way["natural"~"^(bare_rock|sand|scree)$"](${b});
+  way["highway"~"^(motorway|trunk|primary|secondary|tertiary)$"](${b});
+);
+out geom;`;
+}
+
+function leerCacheOsm() {
+  try {
+    const crudo = localStorage.getItem(CLAVE_OSM);
+    if (!crudo) return null;
+    const d = JSON.parse(crudo);
+    if (Date.now() - d.ts > OSM_TTL_MS) return null;
+    return d.datos;
+  } catch { return null; }
+}
+
+/**
+ * Descarga la capa vectorial de OSM para el municipio y la rasteriza al grid.
+ * @returns {Object} { hidrografia, vegetacion, caminos, barreras:Set, resistencia:Map, geometrias }
+ */
+export async function cargarTerrenoOsm(grid, opciones = {}) {
+  const { forzar = false } = opciones;
+  const ix = construirIndiceGrid(grid);
+
+  let elementos = forzar ? null : leerCacheOsm();
+
+  if (!elementos) {
+    const cuerpo = "data=" + encodeURIComponent(consultaOverpass(ix.bbox));
+    const r = await fetch(URL_OVERPASS, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: cuerpo,
+    });
+    if (!r.ok) throw new Error(`Overpass respondió ${r.status} (servidor saturado, reintenta en 1 min)`);
+    const json = await r.json();
+    // Guardamos solo lo indispensable para no reventar localStorage
+    elementos = (json.elements || [])
+      .filter((e) => e.geometry && e.geometry.length)
+      .map((e) => ({
+        t: clasificar(e.tags || {}),
+        n: (e.tags || {}).name || null,
+        g: e.geometry.map((p) => [+p.lat.toFixed(5), +p.lon.toFixed(5)]),
+      }))
+      .filter((e) => e.t);
+    const serializado = JSON.stringify({ ts: Date.now(), datos: elementos });
+    // localStorage ronda los 5 MB por origen y ahí también viven los escenarios:
+    // si la capa no entra con holgura, se usa igual pero sin cachear.
+    if (serializado.length < 2_000_000) {
+      try { localStorage.setItem(CLAVE_OSM, serializado); }
+      catch (e) { console.warn("No se pudo cachear la capa OSM:", e.message); }
+    } else {
+      console.warn(`Capa OSM de ${(serializado.length / 1e6).toFixed(1)} MB: no se cachea.`);
+    }
+  }
+
+  return rasterizar(grid, elementos);
+}
+
+function clasificar(tags) {
+  if (tags.waterway === "river" || tags.waterway === "canal") return "rio";
+  if (tags.waterway === "stream") return "quebrada";
+  if (tags.natural === "water" || tags.landuse === "reservoir") return "agua";
+  if (tags.natural === "wood" || tags.landuse === "forest") return "bosque";
+  if (tags.natural === "scrub") return "matorral";
+  if (tags.natural === "grassland" || tags.landuse === "meadow") return "pastizal";
+  if (tags.natural === "bare_rock" || tags.natural === "sand" || tags.natural === "scree") return "desnudo";
+  if (tags.highway) return "camino";
+  return null;
+}
+
+// Cuánto frena cada elemento la propagación (0 = barrera total, 1 = no frena)
+const RESISTENCIA = {
+  rio: 0.0,        // río ancho: el fuego no cruza (salvo por spotting)
+  agua: 0.0,       // laguna / embalse
+  quebrada: 0.45,  // quebrada: frena bastante, no siempre detiene
+  camino: 0.6,     // cortafuegos antrópico
+  desnudo: 0.1,    // roca / arena
+  cultivo: 0.75,
+  pastizal: 1.0,
+  matorral: 1.0,
+  bosque: 1.0,
+};
+
+function rasterizar(grid, elementos) {
+  const ix = construirIndiceGrid(grid);
+  const resistencia = new Map(); // celda_id → 0..1
+  const clases = new Map();      // celda_id → tipo dominante
+  const conteo = {};
+
+  const marcar = (lat, lon, tipo) => {
+    const celda = celdaEn(grid, lat, lon);
+    if (!celda) return;
+    const r = RESISTENCIA[tipo] ?? 1;
+    const prev = resistencia.get(celda.id);
+    if (prev == null || r < prev) {  // se queda con el elemento más restrictivo
+      resistencia.set(celda.id, r);
+      clases.set(celda.id, tipo);
+    }
+  };
+
+  for (const el of elementos) {
+    conteo[el.t] = (conteo[el.t] || 0) + 1;
+    const g = el.g;
+    for (let i = 0; i < g.length; i++) {
+      marcar(g[i][0], g[i][1], el.t);
+      // Interpolar a lo largo del segmento para no dejar huecos entre vértices
+      if (i < g.length - 1) {
+        const [la, lo] = g[i], [lb, lob] = g[i + 1];
+        const pasos = Math.ceil(
+          Math.max(Math.abs(lb - la) / ix.pasoLat, Math.abs(lob - lo) / ix.pasoLon) * 2
+        );
+        for (let k = 1; k < pasos; k++) {
+          marcar(la + ((lb - la) * k) / pasos, lo + ((lob - lo) * k) / pasos, el.t);
+        }
+      }
+    }
+  }
+
+  // Barreras duras para el autómata (resistencia = 0)
+  const barreras = new Set();
+  for (const [id, r] of resistencia) if (r <= 0.05) barreras.add(id);
+
+  return {
+    resistencia,
+    clases,
+    barreras,
+    conteo,
+    geometrias: elementos,
+    resumen: {
+      celdas_afectadas: resistencia.size,
+      barreras_hidricas: barreras.size,
+      rios: conteo.rio || 0,
+      quebradas: conteo.quebrada || 0,
+      cuerpos_agua: conteo.agua || 0,
+      caminos: conteo.camino || 0,
+      bosque: conteo.bosque || 0,
+    },
+  };
+}
+
+export function limpiarCacheTerreno() {
+  localStorage.removeItem(CLAVE_DEM);
+  localStorage.removeItem(CLAVE_OSM);
+  _indice = null;
+}

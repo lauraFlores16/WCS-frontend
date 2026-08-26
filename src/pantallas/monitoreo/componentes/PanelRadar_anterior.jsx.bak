@@ -1,0 +1,137 @@
+// Panel de análisis automático con animación de radar (Capas 2 y 3).
+// Da la sensación de un monitoreo constante: un radar que barre en círculo,
+// un contador de actualizaciones y la probabilidad más alta detectada. Si esa
+// probabilidad supera el umbral, se marca como riesgo y se invita a pasar a
+// Alertas para iniciar la simulación.
+import { useEffect, useState, useRef } from "react";
+
+const UMBRAL_ALERTA = 66; // % — coincide con nivel ALTA de la verificación
+
+export default function PanelRadar({ verificacion, grid, foco, onEjecutar, puedeSimular }) {
+  const [barridos, setBarridos] = useState(0);
+  const [probCercana, setProbCercana] = useState(0);
+  const [historialProb, setHistorialProb] = useState([]);
+  const intervalo = useRef(null);
+
+  // "Análisis constante": cada barrido toma una muestra del grid y actualiza la
+  // probabilidad más cercana a ser riesgo. Si hay un foco verificado, usa su valor.
+  useEffect(() => {
+    intervalo.current = setInterval(() => {
+      setBarridos((b) => b + 1);
+
+      let prob;
+      if (verificacion) {
+        // Con foco seleccionado: la probabilidad real verificada (con leve ruido visual)
+        prob = verificacion.porcentaje;
+      } else if (grid && grid.length) {
+        // Sin foco: muestrea celdas al azar y toma la mayor (simula "buscar" riesgo)
+        let max = 0;
+        for (let i = 0; i < 40; i++) {
+          const c = grid[Math.floor(Math.random() * grid.length)];
+          const p = Math.round((c.prob_ignicion ?? 0) * 100);
+          if (p > max) max = p;
+        }
+        prob = max;
+      } else {
+        prob = 0;
+      }
+
+      setProbCercana(prob);
+      setHistorialProb((h) => [...h.slice(-23), prob]);
+    }, 1400);
+
+    return () => clearInterval(intervalo.current);
+  }, [verificacion, grid]);
+
+  // Al seleccionar/cambiar un foco verificado, reflejar su probabilidad al instante
+  useEffect(() => {
+    if (verificacion) {
+      setProbCercana(verificacion.porcentaje);
+      setHistorialProb((h) => [...h.slice(-23), verificacion.porcentaje]);
+    }
+  }, [verificacion]);
+
+  const enRiesgo = probCercana >= UMBRAL_ALERTA;
+  const color = enRiesgo ? "var(--alerta-roja)"
+    : probCercana >= 40 ? "var(--alerta-naranja)"
+    : "var(--riesgo-bajo)";
+
+  return (
+    <div className="panel radar-panel">
+      <div className="radar-cabecera">
+        <h3 className="radar-titulo">Análisis automático</h3>
+        <span className="radar-live">
+          <span className="radar-live-dot" /> en vivo
+        </span>
+      </div>
+
+      <div className="radar-cuerpo">
+        {/* Radar animado */}
+        <div className="radar-scope">
+          <svg viewBox="0 0 100 100" className="radar-svg">
+            {/* círculos concéntricos */}
+            <circle cx="50" cy="50" r="46" className="radar-anillo" />
+            <circle cx="50" cy="50" r="31" className="radar-anillo" />
+            <circle cx="50" cy="50" r="16" className="radar-anillo" />
+            <line x1="50" y1="4" x2="50" y2="96" className="radar-cruz" />
+            <line x1="4" y1="50" x2="96" y2="50" className="radar-cruz" />
+            {/* barrido giratorio */}
+            <g className="radar-barrido">
+              <defs>
+                <linearGradient id="radarGrad" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor={color} stopOpacity="0" />
+                  <stop offset="100%" stopColor={color} stopOpacity="0.55" />
+                </linearGradient>
+              </defs>
+              <path d="M50 50 L50 4 A46 46 0 0 1 90 28 Z" fill="url(#radarGrad)" />
+              <line x1="50" y1="50" x2="50" y2="4" stroke={color} strokeWidth="1" opacity="0.8" />
+            </g>
+            {/* punto de detección (parpadea si hay riesgo) */}
+            <circle cx={enRiesgo ? 68 : 40} cy={enRiesgo ? 34 : 62} r="2.6"
+              fill={color} className={enRiesgo ? "radar-blip alerta" : "radar-blip"} />
+          </svg>
+        </div>
+
+        {/* Lectura */}
+        <div className="radar-lectura">
+          <div className="radar-metrica">
+            <span className="radar-metrica-label">Prob. más cercana a riesgo</span>
+            <span className="radar-metrica-valor" style={{ color }}>{probCercana}%</span>
+          </div>
+          <div className="radar-mini-grafica">
+            {historialProb.map((v, i) => (
+              <span key={i} className="radar-barra"
+                style={{ height: `${Math.max(v, 4)}%`, background: v >= UMBRAL_ALERTA ? "var(--alerta-roja)" : v >= 40 ? "var(--alerta-naranja)" : "var(--riesgo-bajo)" }} />
+            ))}
+          </div>
+          <div className="radar-pie">
+            <span>{barridos} análisis</span>
+            <span className="radar-umbral">umbral {UMBRAL_ALERTA}%</span>
+          </div>
+        </div>
+      </div>
+
+      {enRiesgo && (
+        <div className="radar-alerta-bloque">
+          <div className="radar-alerta-encabezado">
+            <span className="radar-alerta-icono">!</span>
+            <span>Foco sobre el umbral de riesgo ({probCercana}%)</span>
+          </div>
+          {foco ? (
+            puedeSimular ? (
+              <button className="btn radar-alerta-boton" onClick={onEjecutar}>
+                Ejecutar simulación del foco
+              </button>
+            ) : (
+              <span className="radar-alerta-nota">Tu rol no permite ejecutar simulaciones.</span>
+            )
+          ) : (
+            <span className="radar-alerta-nota">
+              Selecciona un foco de calor en el mapa para ejecutar la simulación.
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
