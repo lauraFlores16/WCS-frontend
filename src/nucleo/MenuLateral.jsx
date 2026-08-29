@@ -20,11 +20,9 @@ import "./estilos/AppShell.css";
 const CLAVE_PREFERENCIA = "sisprop_menu_abierto";
 
 function leerPreferencia() {
-  try {
-    return localStorage.getItem(CLAVE_PREFERENCIA) !== "0";
-  } catch {
-    return true;
-  }
+  // El menú siempre inicia contraído.
+  // Se expande temporalmente al acercar el mouse.
+  return false;
 }
 
 /** Rótulo flotante para el menú cerrado. */
@@ -83,7 +81,12 @@ export default function MenuLateral({ abierto, setAbierto }) {
     .filter((g) => g.items.length);
 
   return (
-    <nav className={`menu-lateral${abierto ? " abierto" : ""}`} aria-label="Navegación principal">
+    <nav
+      className={`menu-lateral${abierto ? " abierto" : ""}`}
+      aria-label="Navegación principal"
+      onMouseEnter={() => setAbierto(true)}
+      onMouseLeave={() => setAbierto(false)}
+    >
       <button
         className="menu-alternar"
         onClick={() => setAbierto(!abierto)}

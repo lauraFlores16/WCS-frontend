@@ -80,10 +80,10 @@ export default function Monitoreo() {
   const [mostrarHistoricos, setMostrarHistoricos] = useState(true);
 
   // --- Panel derecho: abierto/cerrado y pestaña activa ---
-  const [panelAbierto, setPanelAbierto] = useState(true);
+  const [panelAbierto, setPanelAbierto] = useState(false);
   const [pestana, setPestana] = useState("ubicacion");
-  const [herramientasAbiertas, setHerramientasAbiertas] = useState(true);
-  const [pieAbierto, setPieAbierto] = useState(true);
+  const [herramientasAbiertas, setHerramientasAbiertas] = useState(false);
+  const [pieAbierto, setPieAbierto] = useState(false);
 
   const [focosFirms, setFocosFirms] = useState([]);
   const [firmsCargando, setFirmsCargando] = useState(false);
