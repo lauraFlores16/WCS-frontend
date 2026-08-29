@@ -19,6 +19,7 @@ import RolesPermisos from "./pantallas/usuarios/RolesPermisos";
 import Configuracion from "./pantallas/usuarios/Configuracion";
 import Bitacora from "./pantallas/usuarios/Bitacora";
 
+
 function RutaLogin() {
   const { usuario, iniciando } = useAuth();
 
@@ -31,18 +32,41 @@ function RutaLogin() {
   return <Login />;
 }
 
+
 export default function App() {
   return (
     <AuthProvider>
       <PermisosProvider>
         <EscenarioProvider>
+
           <BrowserRouter>
+
             <Routes>
 
-              {/* Login */}
-              <Route path="/login" element={<RutaLogin />} />
+              {/* =====================================================
+                  ENTRADA PRINCIPAL
+                  ===================================================== */}
 
-              {/* Pantallas protegidas */}
+              <Route
+                path="/"
+                element={<Navigate to="/login" replace />}
+              />
+
+
+              {/* =====================================================
+                  LOGIN
+                  ===================================================== */}
+
+              <Route
+                path="/login"
+                element={<RutaLogin />}
+              />
+
+
+              {/* =====================================================
+                  PANTALLAS PROTEGIDAS
+                  ===================================================== */}
+
               <Route
                 element={
                   <ProtectedRoute>
@@ -61,6 +85,7 @@ export default function App() {
                   }
                 />
 
+
                 {/* Simulación */}
                 <Route
                   path="/simulacion"
@@ -71,11 +96,18 @@ export default function App() {
                   }
                 />
 
-                {/* Datos espaciales fusionados con Dashboard */}
+
+                {/* Datos espaciales fusionados en Dashboard */}
                 <Route
                   path="/datos-espaciales"
-                  element={<Navigate to="/inicio" replace />}
+                  element={
+                    <Navigate
+                      to="/inicio"
+                      replace
+                    />
+                  }
                 />
+
 
                 {/* Monitoreo */}
                 <Route
@@ -87,6 +119,7 @@ export default function App() {
                   }
                 />
 
+
                 {/* Panel de control */}
                 <Route
                   path="/panel-control"
@@ -96,6 +129,7 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+
 
                 {/* Historial */}
                 <Route
@@ -107,6 +141,7 @@ export default function App() {
                   }
                 />
 
+
                 {/* Comparación */}
                 <Route
                   path="/comparacion"
@@ -116,6 +151,7 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+
 
                 {/* Reportes */}
                 <Route
@@ -127,6 +163,7 @@ export default function App() {
                   }
                 />
 
+
                 {/* Gestión de usuarios */}
                 <Route
                   path="/usuarios"
@@ -137,7 +174,8 @@ export default function App() {
                   }
                 />
 
-                {/* Roles */}
+
+                {/* Roles y permisos */}
                 <Route
                   path="/roles"
                   element={
@@ -146,6 +184,7 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+
 
                 {/* Configuración */}
                 <Route
@@ -156,6 +195,7 @@ export default function App() {
                     </ProtectedRoute>
                   }
                 />
+
 
                 {/* Bitácora */}
                 <Route
@@ -169,11 +209,21 @@ export default function App() {
 
               </Route>
 
-              {/* ERROR 404 */}
-              <Route path="*" element={<Error404 />} />
+
+              {/* =====================================================
+                  ERROR 404
+                  Solo aparece cuando la dirección no existe
+                  ===================================================== */}
+
+              <Route
+                path="*"
+                element={<Error404 />}
+              />
 
             </Routes>
+
           </BrowserRouter>
+
         </EscenarioProvider>
       </PermisosProvider>
     </AuthProvider>
