@@ -1744,3 +1744,304 @@
   flex-direction: column;
   gap: 6px;
 }
+
+/* =========================================================================
+   REDISEÑO GIS — mapa a pantalla completa + paneles flotantes compactos
+   Referencia visual: SATRIFO / NASA FIRMS. No modifica lógica ni módulos.
+   ========================================================================= */
+.monitoreo {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.monitoreo-mapa-zona {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  min-width: 0;
+  min-height: 0;
+  padding: 0 !important;
+  gap: 0 !important;
+  overflow: hidden;
+}
+
+.monitoreo-mapa-contenedor {
+  position: absolute !important;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0 !important;
+  border-radius: 0 !important;
+  overflow: hidden;
+  background: var(--bg-app);
+}
+
+.monitoreo-mapa-contenedor .leaflet-container {
+  width: 100%;
+  height: 100% !important;
+  border-radius: 0 !important;
+}
+
+/* El panel contextual derecho flota SOBRE el mapa, no lo encoge. */
+.monitoreo > .panel-deslizable {
+  position: absolute;
+  z-index: 1120;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  max-height: calc(100% - 24px);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.20);
+  overflow: hidden;
+}
+
+.monitoreo > .panel-deslizable.abierto {
+  width: min(330px, calc(100% - 92px));
+}
+
+.monitoreo > .panel-deslizable.cerrado {
+  width: 42px;
+  height: 154px;
+  bottom: auto;
+}
+
+/* -------------------------------------------------------------------------
+   Panel flotante izquierdo: solo deja una pestaña cuando está cerrado.
+   ------------------------------------------------------------------------- */
+.monitoreo-herramientas {
+  position: absolute;
+  z-index: 1110;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: flex-start;
+  max-height: calc(100% - 24px);
+}
+
+.monitoreo-herramientas.abierta {
+  width: min(292px, calc(100% - 84px));
+  flex-direction: column;
+  background: color-mix(in srgb, var(--bg-panel) 96%, transparent);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.monitoreo-herramientas.cerrada {
+  width: auto;
+  background: transparent;
+}
+
+.monitoreo-herramientas-toggle {
+  width: 100%;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.monitoreo-herramientas.cerrada .monitoreo-herramientas-toggle {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  padding: 0;
+  justify-content: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.17);
+}
+
+.monitoreo-herramientas.cerrada .monitoreo-herramientas-toggle > .icono:first-child,
+.monitoreo-herramientas.cerrada .monitoreo-herramientas-toggle-texto {
+  display: none;
+}
+
+.monitoreo-herramientas-toggle-icono {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--acento-500);
+}
+
+.monitoreo-herramientas-toggle-texto {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+
+.monitoreo-herramientas-cuerpo {
+  width: 100%;
+  max-height: calc(100% - 43px);
+  overflow-y: auto;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.monitoreo-herramientas-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.monitoreo-herramientas-seccion:last-of-type {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.monitoreo-herramientas-etiqueta {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--text-muted);
+}
+
+.monitoreo-herramientas-acciones {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.monitoreo-herramientas-acciones .btn:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.monitoreo-fondo-selector {
+  width: 100%;
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px !important;
+}
+
+.monitoreo-fondo-btn {
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 7px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.monitoreo-fondo-btn.activo {
+  border-color: var(--acento-500);
+  background: var(--acento-tint);
+  color: var(--acento-500);
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------------------
+   Leyenda/resultados inferior: se superpone y también puede plegarse.
+   ------------------------------------------------------------------------- */
+.monitoreo-pie {
+  position: absolute !important;
+  z-index: 1090;
+  left: 12px;
+  bottom: 12px;
+  width: min(560px, calc(100% - 92px));
+  max-height: min(38%, 280px);
+  padding: 0 !important;
+  gap: 0 !important;
+  border: 1px solid var(--border-subtle);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--bg-panel) 96%, transparent);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.monitoreo-pie.cerrado {
+  width: auto;
+  max-width: 210px;
+}
+
+.monitoreo-pie-toggle {
+  width: 100%;
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 0;
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.monitoreo-pie-toggle span {
+  flex: 1;
+  text-align: left;
+}
+
+.monitoreo-pie-contenido {
+  max-height: 230px;
+  overflow: auto;
+  padding: 8px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.monitoreo-transporte {
+  margin: 0 !important;
+  padding: 7px 8px !important;
+  background: var(--bg-panel-raised);
+  border-radius: 7px;
+}
+
+/* Leaflet: libera las esquinas cubiertas por los paneles. */
+.monitoreo-mapa-contenedor .leaflet-top.leaflet-left {
+  top: 58px;
+  left: 4px;
+}
+
+.monitoreo-herramientas.abierta ~ .leaflet-container .leaflet-top.leaflet-left {
+  left: 292px;
+}
+
+@media (max-width: 900px) {
+  .monitoreo-herramientas.abierta { width: min(270px, calc(100% - 70px)); }
+  .monitoreo > .panel-deslizable.abierto {
+    top: 8px;
+    right: 8px;
+    bottom: 8px;
+    width: min(320px, calc(100% - 66px));
+    max-height: calc(100% - 16px);
+  }
+  .monitoreo-pie { left: 8px; bottom: 8px; width: min(520px, calc(100% - 74px)); }
+}
+
+@media (max-width: 640px) {
+  .monitoreo-herramientas { top: 8px; left: 8px; }
+  .monitoreo-herramientas.abierta { width: min(272px, calc(100% - 64px)); }
+  .monitoreo-herramientas-cuerpo { padding: 8px; }
+  .monitoreo-herramientas-acciones { grid-template-columns: 1fr; }
+  .monitoreo-herramientas-acciones .btn { grid-column: auto !important; }
+  .monitoreo-pie { max-height: 34%; }
+  .monitoreo-pie-toggle span { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}

@@ -82,6 +82,8 @@ export default function Monitoreo() {
   // --- Panel derecho: abierto/cerrado y pestaña activa ---
   const [panelAbierto, setPanelAbierto] = useState(true);
   const [pestana, setPestana] = useState("ubicacion");
+  const [herramientasAbiertas, setHerramientasAbiertas] = useState(true);
+  const [pieAbierto, setPieAbierto] = useState(true);
 
   const [focosFirms, setFocosFirms] = useState([]);
   const [firmsCargando, setFirmsCargando] = useState(false);
@@ -450,41 +452,68 @@ export default function Monitoreo() {
       {/* ---------- CENTRO: controles + mapa + pie ---------- */}
       <div className="monitoreo-mapa-zona">
 
-        <div className="monitoreo-controles">
-          <SelectorCapas capaActiva={capaActiva} setCapaActiva={setCapaActiva} />
-          <div className="monitoreo-controles-derecha">
-            <SelectorRegion regionId={regionId} onSeleccionar={irARegion} compacto />
-            <SelectorTemporada
-              incluir={incluirTemporada} setIncluir={setIncluirTemporada}
-              temporada={temporada} setTemporada={setTemporada}
-              resumen={auto?.parametros?.temporada} />
-            <SelectorEscenario compacto />
-            <div className="monitoreo-fondo-selector">
-              {Object.entries(FONDOS).map(([key, cfg]) => (
-                <button key={key} className={`monitoreo-fondo-btn${fondo === key ? " activo" : ""}`}
-                  onClick={() => setFondo(key)}>{cfg.label}</button>
-              ))}
+        <div className="monitoreo-mapa-contenedor">
+        <div className={`monitoreo-herramientas${herramientasAbiertas ? " abierta" : " cerrada"}`}>
+          <button
+            className="monitoreo-herramientas-toggle"
+            onClick={() => setHerramientasAbiertas((v) => !v)}
+            aria-expanded={herramientasAbiertas}
+            title={herramientasAbiertas ? "Ocultar capas y filtros" : "Mostrar capas y filtros"}
+          >
+            <Icono nombre={herramientasAbiertas ? "izquierda" : "derecha"} tam={15} />
+            <span className="monitoreo-herramientas-toggle-icono"><Icono nombre="capas" tam={16} /></span>
+            <span className="monitoreo-herramientas-toggle-texto">Capas y filtros</span>
+          </button>
+
+          {herramientasAbiertas && (
+            <div className="monitoreo-herramientas-cuerpo">
+              <div className="monitoreo-herramientas-seccion">
+                <span className="monitoreo-herramientas-etiqueta">Visualización</span>
+                <SelectorCapas capaActiva={capaActiva} setCapaActiva={setCapaActiva} />
+              </div>
+
+              <div className="monitoreo-herramientas-seccion">
+                <span className="monitoreo-herramientas-etiqueta">Consulta</span>
+                <SelectorRegion regionId={regionId} onSeleccionar={irARegion} compacto />
+                <SelectorTemporada
+                  incluir={incluirTemporada} setIncluir={setIncluirTemporada}
+                  temporada={temporada} setTemporada={setTemporada}
+                  resumen={auto?.parametros?.temporada} />
+                <SelectorEscenario compacto />
+              </div>
+
+              <div className="monitoreo-herramientas-seccion">
+                <span className="monitoreo-herramientas-etiqueta">Mapa base</span>
+                <div className="monitoreo-fondo-selector">
+                  {Object.entries(FONDOS).map(([key, cfg]) => (
+                    <button key={key} className={`monitoreo-fondo-btn${fondo === key ? " activo" : ""}`}
+                      onClick={() => setFondo(key)}>{cfg.label}</button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="monitoreo-herramientas-acciones">
+                <button className={`btn btn--mini${modoClic ? " btn--primary" : ""}`}
+                  onClick={() => setModoClic((v) => !v)} title="Marcar el foco con un clic en el mapa">
+                  <Icono nombre="ubicacion" tam={13} />
+                  {modoClic ? "Clic activo" : "Marcar foco"}
+                </button>
+                <button className={`btn btn--mini${mostrarHistoricos ? " btn--primary" : ""}`}
+                  onClick={() => setMostrarHistoricos((v) => !v)}>
+                  <Icono nombre="historial" tam={13} />
+                  Históricos
+                </button>
+                {capaActiva === 3 && (
+                  <button className="btn btn--mini" onClick={cargarFirms} disabled={firmsCargando}>
+                    <Icono nombre="refrescar" tam={13} />
+                    {firmsCargando ? "…" : "Actualizar FIRMS"}
+                  </button>
+                )}
+              </div>
             </div>
-            <button className={`btn btn--mini${modoClic ? " btn--primary" : ""}`}
-              onClick={() => setModoClic((v) => !v)} title="Marcar el foco con un clic en el mapa">
-              <Icono nombre="ubicacion" tam={13} />
-              {modoClic ? "Clic activo" : "Marcar foco"}
-            </button>
-            <button className={`btn btn--mini${mostrarHistoricos ? " btn--primary" : ""}`}
-              onClick={() => setMostrarHistoricos((v) => !v)}>
-              <Icono nombre="historial" tam={13} />
-              Históricos
-            </button>
-            {capaActiva === 3 && (
-              <button className="btn btn--mini" onClick={cargarFirms} disabled={firmsCargando}>
-                <Icono nombre="refrescar" tam={13} />
-                {firmsCargando ? "…" : "FIRMS"}
-              </button>
-            )}
-          </div>
+          )}
         </div>
 
-        <div className="monitoreo-mapa-contenedor">
           {simulacion && (capaActiva === 4 || capaActiva === 5) && (
             <EspectroTiempoReal simulacion={simulacion} indice={indice} foco={foco} />
           )}
@@ -517,7 +546,13 @@ export default function Monitoreo() {
           </BaseMap>
         </div>
 
-        <div className="monitoreo-pie">
+        <div className={`monitoreo-pie${pieAbierto ? " abierto" : " cerrado"}`}>
+          <button className="monitoreo-pie-toggle" onClick={() => setPieAbierto((v) => !v)} aria-expanded={pieAbierto}>
+            <Icono nombre="capas" tam={14} />
+            <span>Leyenda y resultados</span>
+            <Icono nombre={pieAbierto ? "abajo" : "arriba"} tam={13} />
+          </button>
+          {pieAbierto && <div className="monitoreo-pie-contenido">
           <LeyendaCapa capaActiva={capaActiva} />
 
           {(capaActiva === 4 || capaActiva === 5) && simulacion && iteracion && (
@@ -563,6 +598,7 @@ export default function Monitoreo() {
           )}
           {capaActiva === 3 && firmsError && <div className="monitoreo-aviso">{firmsError}</div>}
           {cargando && <span className="text-muted" style={{ fontSize: 12 }}>Cargando…</span>}
+          </div>}
         </div>
       </div>
 
