@@ -2045,3 +2045,617 @@
   .monitoreo-pie { max-height: 34%; }
   .monitoreo-pie-toggle span { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+/* =========================================================================
+   REPORTE DE CAMPO DEL BRIGADISTA
+   -------------------------------------------------------------------------
+   Sin colores literales salvo los tres estados observados, que son
+   semánticos y tienen que coincidir con los del mapa y la leyenda. Todo lo
+   demás por tokens, así que los dos temas salen solos.
+   ========================================================================= */
+
+/* --- Botón de abrir: es la acción principal del brigadista -------------- */
+.rep-btn-abrir {
+  border-color: var(--alerta-roja) !important;
+  background: var(--alerta-roja-tint) !important;
+  color: var(--alerta-roja) !important;
+  font-weight: 700;
+}
+.rep-btn-abrir:hover {
+  background: color-mix(in srgb, var(--alerta-roja) 22%, transparent) !important;
+}
+
+/* --- Panel lateral ------------------------------------------------------
+   Es un panel, no una pantalla nueva: el brigadista está mirando el mapa
+   para situarse y no debe perderlo de vista al reportar. */
+.rep-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-strong);
+  box-shadow: -8px 0 28px rgba(8, 20, 32, 0.28);
+  animation: rep-entrar 0.22s ease;
+}
+@keyframes rep-entrar {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+
+.rep-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-panel-raised);
+}
+.rep-cabecera h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+.rep-cabecera h2 .icono { color: var(--alerta-roja); }
+.rep-cabecera p {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.rep-cerrar {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.rep-cerrar:hover { background: var(--bg-panel-hover); color: var(--text-primary); }
+
+.rep-cuerpo {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.rep-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rep-seccion h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-secondary);
+}
+.rep-obligatorio,
+.rep-opcional {
+  padding: 1px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+.rep-obligatorio {
+  border: 1px solid var(--alerta-roja);
+  background: var(--alerta-roja-tint);
+  color: var(--alerta-roja);
+}
+.rep-opcional {
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-raised);
+  color: var(--text-muted);
+}
+
+.rep-nota {
+  margin: 0;
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* --- Ubicación ---------------------------------------------------------- */
+.rep-btn-mapa { justify-content: center; }
+.rep-btn-mapa.activo {
+  border-color: var(--acento-500);
+  background: var(--acento-tint);
+  color: var(--acento-400);
+  animation: rep-latido 1.4s ease-in-out infinite;
+}
+@keyframes rep-latido {
+  0%, 100% { box-shadow: 0 0 0 0 var(--acento-tint); }
+  50% { box-shadow: 0 0 0 5px var(--acento-tint); }
+}
+.rep-coords {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+}
+.rep-coords label { display: flex; flex-direction: column; gap: 4px; }
+
+.rep-fecha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+  font-size: 12.5px;
+  color: var(--text-primary);
+}
+.rep-fecha .icono { color: var(--acento-400); }
+
+/* --- Estado observado: tres opciones cerradas -------------------------- */
+.rep-estados {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.rep-estado {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-raised);
+  color: var(--text-primary);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.rep-estado:hover { background: var(--bg-panel-hover); border-color: var(--acento-500); }
+.rep-estado.activo {
+  border-color: var(--acento-500);
+  border-width: 2px;
+  padding: 9px 11px;
+  background: var(--acento-tint);
+  box-shadow: var(--acento-glow);
+}
+/* Glifo además del color: la selección no depende de distinguir tonos. */
+.rep-estado-marca {
+  width: 12px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.4;
+  color: var(--acento-400);
+}
+.rep-estado-texto { display: flex; flex-direction: column; gap: 2px; }
+.rep-estado-texto strong { font-size: 12.5px; }
+.rep-estado-texto em {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+
+/* --- Fotografía --------------------------------------------------------- */
+.rep-archivo {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.rep-btn-foto {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  cursor: pointer;
+}
+.rep-foto-previa {
+  display: flex;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+}
+.rep-foto-previa img {
+  width: 82px;
+  height: 62px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+.rep-foto-previa > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+.rep-quitar {
+  align-self: flex-start;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  color: var(--alerta-roja);
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rep-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--alerta-roja);
+  background: var(--alerta-roja-tint);
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.rep-error .icono { flex-shrink: 0; margin-top: 1px; color: var(--alerta-roja); }
+
+/* --- Pie --------------------------------------------------------------- */
+.rep-pie {
+  padding: 13px 16px;
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-panel-raised);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rep-aviso-revision {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.rep-aviso-revision .icono { color: var(--info); flex-shrink: 0; }
+.rep-botones { display: flex; gap: 9px; }
+.rep-botones .btn { flex: 1; justify-content: center; }
+
+/* --- Confirmación tras enviar ------------------------------------------ */
+.rep-confirmacion {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 18px;
+  border-radius: 999px;
+  border: 1px solid var(--exito);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-raised);
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.rep-confirmacion .icono { color: var(--exito); }
+
+/* --- Marcadores y ficha del mapa --------------------------------------- */
+.rep-marcador { background: none; border: none; }
+.rep-marcador svg { filter: drop-shadow(0 2px 3px rgba(8, 20, 32, 0.4)); }
+
+.rep-ficha { display: flex; flex-direction: column; gap: 9px; min-width: 210px; }
+.rep-ficha-cabecera {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 9px;
+  border-left: 3px solid var(--border-strong);
+}
+.rep-ficha-cabecera strong { font-size: 13px; color: var(--text-primary); }
+.rep-ficha-cabecera span {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+}
+.rep-ficha-datos { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.rep-ficha-datos > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.rep-ficha-datos dt { font-size: 10.5px; color: var(--text-secondary); }
+.rep-ficha-datos dd {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: right;
+}
+.rep-ficha-desc {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-panel-raised);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.rep-ficha-foto { display: block; text-decoration: none; }
+.rep-ficha-foto img {
+  width: 100%;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+.rep-ficha-foto span {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--acento-400);
+}
+
+/* --- Leyenda: dos orígenes distintos ----------------------------------- */
+.rep-leyenda {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  z-index: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 13px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background: color-mix(in srgb, var(--bg-panel) 93%, transparent);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-panel);
+  max-width: 260px;
+}
+.rep-leyenda-titulo {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.rep-leyenda-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex-wrap: wrap;
+}
+.rep-leyenda-fila em {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 400;
+  color: var(--text-muted);
+  width: 100%;
+  padding-left: 20px;
+}
+/* Las dos formas del mapa, reproducidas en la leyenda: círculo para el
+   sensor, pin para la persona. */
+.rep-leyenda-circulo {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #FB8C00;
+  border: 1px solid #ffffff;
+  flex-shrink: 0;
+}
+.rep-leyenda-pin {
+  width: 11px;
+  height: 14px;
+  flex-shrink: 0;
+  background: var(--alerta-roja);
+  border: 1px solid #ffffff;
+  border-radius: 50% 50% 50% 50% / 42% 42% 62% 62%;
+  clip-path: polygon(50% 100%, 0 42%, 0 0, 100% 0, 100% 42%);
+}
+.rep-leyenda-estados {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 11px;
+  padding-left: 20px;
+}
+.rep-leyenda-estados > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.rep-leyenda-estados i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 700px) {
+  .rep-panel { width: 100vw; }
+  .rep-leyenda { max-width: calc(100% - 28px); }
+}
+
+:root[data-tema="claro"] .rep-estado.activo,
+:root[data-tema="claro"] .rep-estado-marca,
+:root[data-tema="claro"] .rep-btn-mapa.activo,
+:root[data-tema="claro"] .rep-fecha .icono,
+:root[data-tema="claro"] .rep-ficha-foto span {
+  color: var(--acento-600);
+}
+
+/* =========================================================================
+   ESTADO DE FOCOS — NASA FIRMS y base histórica, separados
+   ========================================================================= */
+.ef-panel { display: flex; flex-direction: column; gap: 10px; }
+
+.ef-bloque {
+  padding: 10px 11px;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--alerta-naranja);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+/* La histórica en gris: distinta fuente, distinto peso visual. */
+.ef-bloque--hist { border-left-color: #64748B; }
+
+.ef-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ef-fuente {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+/* Mismas formas que en el mapa: relleno para activos, hueco para históricos. */
+.ef-punto { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.ef-punto--firms { background: var(--alerta-naranja); }
+.ef-punto--hist { background: transparent; border: 1.5px solid #64748B; }
+
+.ef-recargar {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.ef-recargar:hover:not(:disabled) { background: var(--bg-panel-hover); color: var(--text-primary); }
+.ef-recargar:disabled { opacity: .6; cursor: progress; }
+
+.ef-interruptor {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.ef-datos { margin: 0; display: flex; flex-direction: column; gap: 3px; }
+.ef-datos > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ef-datos dt { font-size: 10.5px; color: var(--text-secondary); }
+.ef-datos dd {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: right;
+}
+.ef-contador { font-size: 14px; font-weight: 700; }
+
+.ef-mensaje {
+  margin: 0;
+  padding: 6px 9px;
+  border-left: 2px solid var(--border-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--bg-panel);
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+.ef-detalle {
+  display: block;
+  margin-top: 3px;
+  font-size: 9.5px;
+  color: var(--text-muted);
+}
+
+.ef-nota {
+  margin: 0;
+  font-size: 9.5px;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+.ef-nota--aviso { display: flex; align-items: flex-start; gap: 5px; }
+.ef-nota--aviso .icono { flex-shrink: 0; margin-top: 1px; color: var(--info); }
+
+/* --- Los tres interruptores de capa, juntos ----------------------------- */
+.ef-capas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 9px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel);
+}
+.ef-capas-titulo {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+.ef-capas .ef-interruptor {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--text-primary);
+}
+.ef-capas .ef-interruptor b {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.ef-punto--evento {
+  background: transparent;
+  border: 1.5px solid var(--acento-500);
+}
+
+.ef-desactivadas {
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--text-muted);
+  font-style: italic;
+}

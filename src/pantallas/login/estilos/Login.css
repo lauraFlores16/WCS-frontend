@@ -284,30 +284,62 @@
    LOGO SIPRO COMPLETO
    ========================================================= */
 
+/* =========================================================
+   DOS ZONAS DE TEXTO, Y NO SE PINTAN IGUAL
+   ---------------------------------------------------------
+   El encabezado y el pie WCS van DIRECTAMENTE sobre banner.png, que es una
+   foto oscura: ahí el blanco es correcto en los dos temas, y lo que hacía
+   falta era una sombra para que no se pierda en las zonas claras de la foto.
+
+   El formulario, en cambio, es un `.panel`: superficie opaca del sistema.
+   Ahí el blanco forzado era el error —en modo claro quedaba etiqueta blanca
+   sobre panel blanco y texto blanco dentro de un campo casi blanco, o sea
+   los campos de correo y contraseña invisibles mientras se escribía.
+   ========================================================= */
+
+/* --- Sobre la foto: blanco con sombra, en ambos temas --- */
 .login-titulo {
   color: #ffffff;
   -webkit-text-fill-color: #ffffff;
   background: none;
+  text-shadow: 0 2px 12px rgba(8, 20, 32, 0.55);
 }
 
 .login-encabezado .text-muted {
   color: #ffffff !important;
-}
-
-.login-form .field-label {
-  color: #ffffff;
-}
-
-.login-form .input {
-  color: #ffffff;
-}
-
-.login-form .input::placeholder {
-  color: rgba(255, 255, 255, 0.60);
+  text-shadow: 0 1px 8px rgba(8, 20, 32, 0.6);
 }
 
 .login-wcs-label {
   color: #ffffff;
+  text-shadow: 0 1px 8px rgba(8, 20, 32, 0.6);
+}
+
+/* --- Dentro del panel: tokens del tema, nunca blanco fijo --- */
+.login-form .field-label {
+  color: var(--text-secondary);
+}
+
+.login-form .input {
+  color: var(--text-primary);
+  background: var(--bg-void);
+  border: 1px solid var(--border-strong);
+}
+
+.login-form .input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+/* El autorrelleno de Chrome se hereda de tokens.css; aquí solo se refuerza
+   para que el recuadro interior tape del todo el amarillo del navegador
+   dentro del panel del login. */
+.login-form .input:-webkit-autofill,
+.login-form .input:-webkit-autofill:hover,
+.login-form .input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-void) inset;
+  box-shadow: 0 0 0 1000px var(--bg-void) inset;
 }
 
 /* =========================================================

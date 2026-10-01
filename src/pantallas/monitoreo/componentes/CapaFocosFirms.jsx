@@ -3,8 +3,10 @@
 // se dibujan de forma llamativa: un halo exterior + un núcleo brillante, con el
 // tamaño escalado por intensidad (FRP). Al hacer clic en uno se toma como punto
 // de inicio de la simulación (celda del grid más cercana).
-// Los históricos (respaldo de focos.csv) se pintan discretos y azulados para no
-// competir visualmente con los activos de hoy.
+// Esta capa dibuja SOLO detecciones activas. La rama que pintaba históricos
+// en azul se eliminó: mientras existía, cualquier cosa con `historico: true`
+// que llegara a este array se renderizaba dentro de la capa de NASA FIRMS y
+// se leía como detección actual. Los históricos tienen su propia capa.
 import { CircleMarker, Tooltip, Popup } from "react-leaflet";
 
 function colorFoco(frp) {
@@ -23,33 +25,16 @@ function radioFoco(frp) {
 
 export default function CapaFocosFirms({ focos, onSeleccionarFoco }) {
   return focos.map((f) => {
-    const historico = f.historico;
+    // Cinturón de seguridad: si algo marcado como histórico se cuela en este
+    // array, no se dibuja. La capa de activos solo pinta activos.
+    if (f.historico) return null;
 
-    if (historico) {
-      return (
-        <CircleMarker
-          key={f.id}
-          center={[f.lat, f.lon]}
-          radius={3.5}
-          pathOptions={{ color: "#8ab4d8", fillColor: "#8ab4d8", fillOpacity: 0.25, weight: 1 }}
-          eventHandlers={onSeleccionarFoco ? { click: () => onSeleccionarFoco(f) } : undefined}
-        >
-          <Popup>
-            <strong>Foco histórico (NASA FIRMS)</strong><br />
-            Coordenadas: {f.lat.toFixed(4)}, {f.lon.toFixed(4)}<br />
-            Fecha: {f.fecha}<br />
-            Satélite: {f.satelite}
-          </Popup>
-        </CircleMarker>
-      );
-    }
-
-    // --- Foco ACTIVO: halo + núcleo, muy visible ---
     const color = colorFoco(f.frp);
     const r = radioFoco(f.frp);
     const manejadores = onSeleccionarFoco ? { click: () => onSeleccionarFoco(f) } : undefined;
     return (
-      <FocoActivo key={f.id} f={f} color={color} r={r} manejadores={manejadores} onSeleccionarFoco={onSeleccionarFoco} />
+      <FocoActivo key={f.id} f={f} color={color} r={r} manejadores={manejadores}
+        onSeleccionarFoco={onSeleccionarFoco} />
     );
   });
 }

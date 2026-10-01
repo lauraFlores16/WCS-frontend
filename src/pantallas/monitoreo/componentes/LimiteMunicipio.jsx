@@ -1,29 +1,39 @@
-// Frontera oficial del municipio de Apolo (Franz Tamayo, La Paz).
-// Dibuja el límite administrativo real (del shapefile municipal) sobre el mapa,
-// como referencia del área de estudio. Se carga una sola vez.
+// Límite administrativo real del municipio, del shapefile oficial.
+// `zona` elige cuál: "apolo" (caso de estudio) o "rurrenabaque" (validación
+// externa). Colores distintos a propósito, para que no se confundan.
 import { useEffect, useState } from "react";
 import { GeoJSON } from "react-leaflet";
 
-export default function LimiteMunicipio({ visible = true }) {
+const ZONAS = {
+  apolo: { archivo: "/datos/apolo_limite.geojson", color: "#2fafa6" },
+  rurrenabaque: { archivo: "/datos/rurrenabaque_limite.geojson", color: "#3B82F6" },
+};
+
+export default function LimiteMunicipio({ visible = true, zona = "apolo" }) {
   const [geojson, setGeojson] = useState(null);
+  const cfg = ZONAS[zona] || ZONAS.apolo;
 
   useEffect(() => {
-    fetch("/datos/apolo_limite.geojson")
-      .then((r) => r.json())
-      .then(setGeojson)
-      .catch(() => setGeojson(null));
-  }, []);
+    let vivo = true;
+    setGeojson(null);
+    fetch(cfg.archivo)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (vivo) setGeojson(d); })
+      .catch(() => { if (vivo) setGeojson(null); });
+    return () => { vivo = false; };
+  }, [cfg.archivo]);
 
   if (!visible || !geojson) return null;
 
   return (
     <GeoJSON
+      key={zona}
       data={geojson}
       style={{
-        color: "#2fafa6",        // turquesa de marca
+        color: cfg.color,
         weight: 2.5,
         opacity: 0.9,
-        fillColor: "#2fafa6",
+        fillColor: cfg.color,
         fillOpacity: 0.04,
         dashArray: "6 4",
       }}

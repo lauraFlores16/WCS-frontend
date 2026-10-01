@@ -18,6 +18,7 @@ import Icono from "../../nucleo/Icono";
 import { usePermisos } from "../../nucleo/PermisosContext";
 import { cargarGrid, cargarFocos } from "../../local/datos";
 import { escenariosLocal } from "../../local/api";
+import PanelPeligroHorario from "./componentes/PanelPeligroHorario";
 import "./estilos/Dashboard.css";
 
 // Bandas de riesgo. El color es SEMÁNTICO (estado), no decorativo, y nunca va
@@ -147,6 +148,11 @@ export default function Dashboard() {
           </article>
         ))}
       </section>
+
+      {/* Peligro meteorológico proyectado. Va primero porque contesta la
+          pregunta más inmediata al abrir la aplicación: ¿hoy hay riesgo y a
+          qué hora? Lo demás del tablero es estructural y cambia poco. */}
+      <PanelPeligroHorario />
 
       <div className="tablero-rejilla">
 

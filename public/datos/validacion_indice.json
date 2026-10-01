@@ -1,0 +1,204 @@
+{
+  "zonas": {
+    "apolo": [
+      {
+        "id": "apolo_2023_10",
+        "zona": "apolo",
+        "etiqueta": "Apolo · 22-26 octubre 2023",
+        "fecha_inicio": "2023-10-22",
+        "fecha_fin": "2023-10-26",
+        "ejecutado": true,
+        "listo_para_ejecutar": true,
+        "faltan": [],
+        "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+      },
+      {
+        "id": "apolo_2019_08_m908",
+        "zona": "apolo",
+        "etiqueta": "Apolo · 31/08 a 04/09/2019",
+        "fecha_inicio": "2019-08-31",
+        "fecha_fin": "2019-09-04",
+        "ejecutado": true,
+        "listo_para_ejecutar": true,
+        "faltan": [],
+        "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+      },
+      {
+        "id": "apolo_2020_07_m1056",
+        "zona": "apolo",
+        "etiqueta": "Apolo · 18/07 a 22/07/2020",
+        "fecha_inicio": "2020-07-18",
+        "fecha_fin": "2020-07-22",
+        "ejecutado": true,
+        "listo_para_ejecutar": true,
+        "faltan": [],
+        "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+      },
+      {
+        "id": "apolo_2022_08_m939",
+        "zona": "apolo",
+        "etiqueta": "Apolo · 19/08 a 23/08/2022",
+        "fecha_inicio": "2022-08-19",
+        "fecha_fin": "2022-08-23",
+        "ejecutado": true,
+        "listo_para_ejecutar": true,
+        "faltan": [],
+        "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+      },
+      {
+        "id": "apolo_2023_10_m349",
+        "zona": "apolo",
+        "etiqueta": "Apolo · 22/10 a 26/10/2023",
+        "fecha_inicio": "2023-10-22",
+        "fecha_fin": "2023-10-26",
+        "ejecutado": true,
+        "listo_para_ejecutar": true,
+        "faltan": [],
+        "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+      },
+      {
+        "id": "apolo_2023_10_m508",
+        "zona": "apolo",
+        "etiqueta": "Apolo · 22/10 a 26/10/2023",
+        "fecha_inicio": "2023-10-22",
+        "fecha_fin": "2023-10-26",
+        "ejecutado": true,
+        "listo_para_ejecutar": true,
+        "faltan": [],
+        "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+      },
+      {
+        "id": "apolo_2024_08_m1120",
+        "zona": "apolo",
+        "etiqueta": "Apolo · 30/08 a 03/09/2024",
+        "fecha_inicio": "2024-08-30",
+        "fecha_fin": "2024-09-03",
+        "ejecutado": true,
+        "listo_para_ejecutar": true,
+        "faltan": [],
+        "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+      }
+    ],
+    "rurrenabaque": [
+      {
+        "id": "rurrenabaque_2023",
+        "zona": "rurrenabaque",
+        "etiqueta": "Rurrenabaque · 2023 (pendiente)",
+        "fecha_inicio": "",
+        "fecha_fin": "",
+        "ejecutado": false,
+        "listo_para_ejecutar": false,
+        "faltan": [
+          "archivo_focos",
+          "cicatriz_grid",
+          "focos_iniciales",
+          "resultado",
+          "metricas",
+          "focos FIRMS de Rurrenabaque (f2_descargar_firms_2023.py, necesita clave NASA)",
+          "grid de 500 m con NDVI (f8_construir_grid.py, necesita internet)",
+          "fechas del evento (salen de f3_f4_analisis_y_evento.py)"
+        ],
+        "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1"
+      }
+    ]
+  },
+  "eventos": [
+    {
+      "id": "apolo_2023_10",
+      "zona": "apolo",
+      "etiqueta": "Apolo · 22-26 octubre 2023",
+      "fecha_inicio": "2023-10-22",
+      "fecha_fin": "2023-10-26",
+      "ejecutado": true,
+      "listo_para_ejecutar": true,
+      "faltan": [],
+      "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+    },
+    {
+      "id": "rurrenabaque_2023",
+      "zona": "rurrenabaque",
+      "etiqueta": "Rurrenabaque · 2023 (pendiente)",
+      "fecha_inicio": "",
+      "fecha_fin": "",
+      "ejecutado": false,
+      "listo_para_ejecutar": false,
+      "faltan": [
+        "archivo_focos",
+        "cicatriz_grid",
+        "focos_iniciales",
+        "resultado",
+        "metricas",
+        "focos FIRMS de Rurrenabaque (f2_descargar_firms_2023.py, necesita clave NASA)",
+        "grid de 500 m con NDVI (f8_construir_grid.py, necesita internet)",
+        "fechas del evento (salen de f3_f4_analisis_y_evento.py)"
+      ],
+      "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1"
+    },
+    {
+      "id": "apolo_2019_08_m908",
+      "zona": "apolo",
+      "etiqueta": "Apolo · 31/08 a 04/09/2019",
+      "fecha_inicio": "2019-08-31",
+      "fecha_fin": "2019-09-04",
+      "ejecutado": true,
+      "listo_para_ejecutar": true,
+      "faltan": [],
+      "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+    },
+    {
+      "id": "apolo_2020_07_m1056",
+      "zona": "apolo",
+      "etiqueta": "Apolo · 18/07 a 22/07/2020",
+      "fecha_inicio": "2020-07-18",
+      "fecha_fin": "2020-07-22",
+      "ejecutado": true,
+      "listo_para_ejecutar": true,
+      "faltan": [],
+      "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+    },
+    {
+      "id": "apolo_2022_08_m939",
+      "zona": "apolo",
+      "etiqueta": "Apolo · 19/08 a 23/08/2022",
+      "fecha_inicio": "2022-08-19",
+      "fecha_fin": "2022-08-23",
+      "ejecutado": true,
+      "listo_para_ejecutar": true,
+      "faltan": [],
+      "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+    },
+    {
+      "id": "apolo_2023_10_m349",
+      "zona": "apolo",
+      "etiqueta": "Apolo · 22/10 a 26/10/2023",
+      "fecha_inicio": "2023-10-22",
+      "fecha_fin": "2023-10-26",
+      "ejecutado": true,
+      "listo_para_ejecutar": true,
+      "faltan": [],
+      "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+    },
+    {
+      "id": "apolo_2023_10_m508",
+      "zona": "apolo",
+      "etiqueta": "Apolo · 22/10 a 26/10/2023",
+      "fecha_inicio": "2023-10-22",
+      "fecha_fin": "2023-10-26",
+      "ejecutado": true,
+      "listo_para_ejecutar": true,
+      "faltan": [],
+      "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+    },
+    {
+      "id": "apolo_2024_08_m1120",
+      "zona": "apolo",
+      "etiqueta": "Apolo · 30/08 a 03/09/2024",
+      "fecha_inicio": "2024-08-30",
+      "fecha_fin": "2024-09-03",
+      "ejecutado": true,
+      "listo_para_ejecutar": true,
+      "faltan": [],
+      "cicatriz_fuente": "MapBiomas Fire Bolivia coleccion 1 · superficie quemada anual"
+    }
+  ]
+}

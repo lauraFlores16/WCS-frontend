@@ -27,10 +27,13 @@ import Icono from "../../nucleo/Icono";
 import PanelDeslizable from "../../nucleo/PanelDeslizable";
 import ConsolaClima from "../../nucleo/consola/ConsolaClima";
 import { usePermisos } from "../../nucleo/PermisosContext";
+import { reportesCampoLocal } from "../../local/api";
 import { useEscenario } from "../../nucleo/EscenarioContext";
 import { cargarGrid } from "../../local/datos";
 import { colorTopografia, colorAmbiental, colorProbabilidad, celdaMasCercana } from "../../local/capas";
-import { cargarFocosFirmsEnVivo } from "../../local/nasa_firms";
+import { cargarFocosFirmsEnVivo, cargarFocosHistoricos } from "../../local/nasa_firms";
+import CapaFocosHistoricos from "./componentes/CapaFocosHistoricos";
+import PanelEstadoFirms from "./componentes/PanelEstadoFirms";
 import { verificarProbabilidadIncendio } from "../../local/verificacion_probabilidad";
 import { calcularTiempoPropagacion, compararConHistoricoTiempo } from "../../local/tiempo_propagacion";
 import { compararConHistoricos } from "../../local/comparacion";
@@ -47,6 +50,8 @@ import CapaFocosFirms from "./componentes/CapaFocosFirms";
 import EspectroTiempoReal from "./componentes/EspectroTiempoReal";
 import LimiteMunicipio from "./componentes/LimiteMunicipio";
 import CapturadorClic from "./componentes/CapturadorClic";
+import ModalReporteIncendio from "./componentes/ModalReporteIncendio";
+import CapaReportesCampo, { ESTADO_REPORTE } from "./componentes/CapaReportesCampo";
 import MarcadorFoco from "./componentes/MarcadorFoco";
 import MarcadoresHistoricos from "./componentes/MarcadoresHistoricos";
 import PanelAlertas from "./componentes/PanelAlertas";
@@ -62,6 +67,10 @@ import { generarInformeIncendio } from "../historial/informe_incendio";
 import VisorInforme from "../historial/VisorInforme";
 import "./estilos/Monitoreo.css";
 
+// Las capas históricas quedan fuera de la interfaz mientras se verifica NASA
+// FIRMS de forma aislada. Poner en true para devolverlas.
+const CAPAS_HISTORICAS_HABILITADAS = false;
+
 export default function Monitoreo() {
   const { puede } = usePermisos();
   const { escenarioId, foco, seleccionarFoco, seleccionarEscenario } = useEscenario();
@@ -76,8 +85,11 @@ export default function Monitoreo() {
   const [regionId, setRegionId] = useState(null);
   const [incluirTemporada, setIncluirTemporada] = useState(false);
   const [temporada, setTemporada] = useState("auto");
-  const [historicos, setHistoricos] = useState([]);
-  const [mostrarHistoricos, setMostrarHistoricos] = useState(true);
+  const [eventosHistoricos, setEventosHistoricos] = useState([]);
+  // Eventos históricos de validación (2021, 2023, 2024). APAGADOS al abrir:
+  // son escenarios de referencia, no detecciones actuales, y arrancando en
+  // true aparecían sobre el mapa como si lo fueran.
+  const [mostrarHistoricos, setMostrarHistoricos] = useState(false);
 
   // --- Panel derecho: abierto/cerrado y pestaña activa ---
   const [panelAbierto, setPanelAbierto] = useState(false);
@@ -85,7 +97,17 @@ export default function Monitoreo() {
   const [herramientasAbiertas, setHerramientasAbiertas] = useState(false);
   const [pieAbierto, setPieAbierto] = useState(false);
 
-  const [focosFirms, setFocosFirms] = useState([]);
+  const [focosActivos, setFocosActivos] = useState([]);
+  // Estado completo de la consulta a NASA: el mapa ya no se conforma con la
+  // lista de focos, necesita saber POR QUÉ está vacía.
+  const [firmsEstado, setFirmsEstado] = useState(null);
+
+  // Capa histórica: otra fuente, otro interruptor. Apagada por defecto para
+  // que nadie la confunda con detecciones actuales.
+  const [focosHistoricos, setFocosHistoricos] = useState([]);
+  const [histEstado, setHistEstado] = useState(null);
+  const [verHistoricos, setVerHistoricos] = useState(false);
+  const [histCargando, setHistCargando] = useState(false);
   const [firmsCargando, setFirmsCargando] = useState(false);
   const [firmsError, setFirmsError] = useState(null);
   const [focoFirmsSel, setFocoFirmsSel] = useState(null);
@@ -129,11 +151,33 @@ export default function Monitoreo() {
   const [cargando, setCargando] = useState(false);
 
   const puedeSimular = puede("ejecutar_simulacion");
+
+  // --- Reportes de campo de los brigadistas -------------------------------
+  // Dos permisos distintos a propósito: crear es solo del brigadista, ver es
+  // de los tres roles operativos. El servidor los comprueba igual; ocultar el
+  // botón aquí es comodidad, no control de acceso.
+  const puedeReportar = puede("reportar_incendio");
+  const puedeVerReportes = puede("ver_reportes_campo");
+  const [reportes, setReportes] = useState([]);
+  const [verReportes, setVerReportes] = useState(true);
+  const [panelReporte, setPanelReporte] = useState(false);
+  const [puntoReporte, setPuntoReporte] = useState(null);
+  const [esperandoPunto, setEsperandoPunto] = useState(false);
+  const [avisoReporte, setAvisoReporte] = useState(null);
+
+  const cargarReportes = useCallback(() => {
+    if (!puedeVerReportes) return;
+    reportesCampoLocal.listar()
+      .then((r) => setReportes(r?.data || r || []))
+      .catch(() => { /* sin reportes: el mapa se dibuja igual */ });
+  }, [puedeVerReportes]);
+
+  useEffect(() => { cargarReportes(); }, [cargarReportes]);
   const pasoCapa = 1;
 
   useEffect(() => {
     cargarGrid().then((g) => setGrid(g));
-    historicosApi.listar().then(({ data }) => setHistoricos(data)).catch(() => setHistoricos([]));
+    historicosApi.listar().then(({ data }) => setEventosHistoricos(data)).catch(() => setEventosHistoricos([]));
     leerCalibracion().then(setCalibracion).catch(() => setCalibracion(null));
   }, []);
 
@@ -186,28 +230,59 @@ export default function Monitoreo() {
 
   function ejecutarVerificacion(lat, lon) {
     if (grid.length === 0) return;
-    setVerificacion(verificarProbabilidadIncendio(lat, lon, grid, historicos));
+    setVerificacion(verificarProbabilidadIncendio(lat, lon, grid, eventosHistoricos));
   }
 
   const cargarFirms = useCallback(() => {
     setFirmsCargando(true);
     setFirmsError(null);
-    cargarFocosFirmsEnVivo()
+    cargarFocosFirmsEnVivo("apolo")
       .then((r) => {
-        const focos = r.focos ?? [];
-        setFocosFirms(focos);
-        if (r.respaldo === "historico") {
-          setFirmsError(r.mensaje || `Mostrando ${focos.length} focos históricos reales del municipio.`);
-        } else if (focos.length) {
-          setFirmsError(null);
+        // `focos` solo trae detecciones reales de NASA. Si viene vacío, el
+        // estado dice si es que no hubo, falta la clave o falló el servicio.
+        const recibidos = r.focos ?? [];
+        // Lo que se dibuja: solo con estado "correcto". Los dos números tienen
+        // que coincidir; si no, algo añade focos por otra vía.
+        const renderizados = r.estado === "correcto" ? recibidos.length : 0;
+        console.log("ESTADO FIRMS:", r.estado);
+        console.log("FIRMS RECIBIDOS:", recibidos.length);
+        console.log("FIRMS RENDERIZADOS:", renderizados);
+        if (r.recibidos_bbox != null) {
+          console.log("  del recuadro:", r.recibidos_bbox,
+                      "· descartados fuera del polígono:", r.descartados_fuera ?? 0);
         }
+        setFocosActivos(recibidos);
+        setFirmsEstado({ ...r, consultadoEn: new Date().toISOString() });
+        setFirmsError(r.estado === "correcto" ? null : r.mensaje || null);
       })
-      .catch(() => setFirmsError("NASA FIRMS no responde ahora. El foco se elige por probabilidad XGBoost."))
+      .catch((e) => {
+        setFocosActivos([]);
+        console.log("ESTADO FIRMS:", "error");
+        console.log("FIRMS RECIBIDOS:", 0);
+        console.log("FIRMS RENDERIZADOS:", 0);
+        setFirmsEstado({ estado: "error", fuente: "NASA FIRMS",
+                         mensaje: "NASA FIRMS no está disponible.",
+                         detalle: String(e?.message || e).slice(0, 200),
+                         consultadoEn: new Date().toISOString() });
+        setFirmsError("NASA FIRMS no está disponible.");
+      })
       .finally(() => setFirmsCargando(false));
   }, []);
 
+  const cargarHistoricos = useCallback(() => {
+    if (focosHistoricos.length || histCargando) return;
+    setHistCargando(true);
+    cargarFocosHistoricos("apolo", { limite: 2000 })
+      .then((r) => { setFocosHistoricos(r.focos ?? []); setHistEstado(r); })
+      .catch(() => setHistEstado({ mensaje: "No se pudieron cargar los focos históricos." }))
+      .finally(() => setHistCargando(false));
+  }, [focosHistoricos.length, histCargando]);
+
+  useEffect(() => { if (verHistoricos) cargarHistoricos(); },
+           [verHistoricos, cargarHistoricos]);
+
   useEffect(() => {
-    if (capaActiva === 3 && focosFirms.length === 0) cargarFirms();
+    if (capaActiva === 3 && focosActivos.length === 0) cargarFirms();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [capaActiva]);
 
@@ -483,6 +558,24 @@ export default function Monitoreo() {
               </div>
 
               <div className="monitoreo-herramientas-seccion">
+                <span className="monitoreo-herramientas-etiqueta">Focos</span>
+                <PanelEstadoFirms
+                  firms={firmsEstado}
+                  cargando={firmsCargando}
+                  onRecargar={cargarFirms}
+                  capaFirmsActiva={capaActiva === 3}
+                  onCapaFirms={(v) => setCapaActiva(v ? 3 : 0)}
+                  historico={histEstado}
+                  verHistoricos={verHistoricos}
+                  onVerHistoricos={setVerHistoricos}
+                  histCargando={histCargando}
+                  historicasHabilitadas={CAPAS_HISTORICAS_HABILITADAS}
+                  eventos={eventosHistoricos}
+                  verEventos={mostrarHistoricos}
+                  onVerEventos={setMostrarHistoricos} />
+              </div>
+
+              <div className="monitoreo-herramientas-seccion">
                 <span className="monitoreo-herramientas-etiqueta">Mapa base</span>
                 <div className="monitoreo-fondo-selector">
                   {Object.entries(FONDOS).map(([key, cfg]) => (
@@ -493,15 +586,28 @@ export default function Monitoreo() {
               </div>
 
               <div className="monitoreo-herramientas-acciones">
+                {/* El brigadista es el único que puede crear reportes. El botón
+                    va primero y destacado: es su acción principal. */}
+                {puedeReportar && (
+                  <button className="btn btn--mini rep-btn-abrir"
+                    onClick={() => { setPanelReporte(true); setEsperandoPunto(true); }}
+                    title="Registrar un incendio observado en el terreno">
+                    <Icono nombre="aviso" tam={13} />
+                    Reportar incendio
+                  </button>
+                )}
+                {puedeVerReportes && reportes.length > 0 && (
+                  <button className={`btn btn--mini${verReportes ? " btn--primary" : ""}`}
+                    onClick={() => setVerReportes((v) => !v)}
+                    title="Mostrar u ocultar los reportes enviados desde el terreno">
+                    <Icono nombre="ubicacion" tam={13} />
+                    Reportes ({reportes.length})
+                  </button>
+                )}
                 <button className={`btn btn--mini${modoClic ? " btn--primary" : ""}`}
                   onClick={() => setModoClic((v) => !v)} title="Marcar el foco con un clic en el mapa">
                   <Icono nombre="ubicacion" tam={13} />
                   {modoClic ? "Clic activo" : "Marcar foco"}
-                </button>
-                <button className={`btn btn--mini${mostrarHistoricos ? " btn--primary" : ""}`}
-                  onClick={() => setMostrarHistoricos((v) => !v)}>
-                  <Icono nombre="historial" tam={13} />
-                  Históricos
                 </button>
                 {capaActiva === 3 && (
                   <button className="btn btn--mini" onClick={cargarFirms} disabled={firmsCargando}>
@@ -526,8 +632,16 @@ export default function Monitoreo() {
             {grid.length > 0 && capaActiva === 2 && (
               <CapaColoreada celdas={grid} colorDe={(c) => colorAmbiental(c).color} opacidad={0.5} paso={pasoCapa} />
             )}
-            {capaActiva === 3 && focosFirms.length > 0 && (
-              <CapaFocosFirms focos={focosFirms} onSeleccionarFoco={usarFocoFirms} />
+            {/* NASA FIRMS. Solo con estado "correcto": con sin_focos,
+                sin_clave o error el array viene vacío, pero se condiciona
+                también al estado para que no haya forma de dibujar nada. */}
+            {capaActiva === 3 && firmsEstado?.estado === "correcto"
+              && focosActivos.length > 0 && (
+              <CapaFocosFirms focos={focosActivos} onSeleccionarFoco={usarFocoFirms} />
+            )}
+            {CAPAS_HISTORICAS_HABILITADAS && verHistoricos
+              && focosHistoricos.length > 0 && (
+              <CapaFocosHistoricos focos={focosHistoricos} />
             )}
             {grid.length > 0 && (capaActiva === 4 || capaActiva === 5) && (
               <CapaColoreada celdas={grid} colorDe={(c) => colorProbabilidad(c.prob_ignicion)} opacidad={0.3} paso={pasoCapa} />
@@ -536,12 +650,29 @@ export default function Monitoreo() {
             {(capaActiva === 4 || capaActiva === 5) && iteracion && <CapaPropagacion celdas={iteracion.celdas} />}
 
             {capaActiva !== 5 && <MarcadorFoco foco={foco} />}
-            <CapturadorClic activo={modoClic} onClic={(lat, lon) => { setFocoFirmsSel(null); ponerFoco(lat, lon); }} />
+            {/* Reportes de campo. Van con forma de pin, no de círculo: los
+                círculos son los focos satelitales y confundir una detección
+                automática con una observación humana sería grave. */}
+            {puedeVerReportes && verReportes && (
+              <CapaReportesCampo reportes={reportes} puedeVerDetalle={true} />
+            )}
+
+            {/* Mientras el panel de reporte pide un punto, el clic en el mapa
+                lo marca en vez de mover el foco de simulación. */}
+            {esperandoPunto ? (
+              <CapturadorClic activo={true} onClic={(lat, lon) => {
+                setPuntoReporte({ lat, lon });
+                setEsperandoPunto(false);
+              }} />
+            ) : (
+              <CapturadorClic activo={modoClic} onClic={(lat, lon) => { setFocoFirmsSel(null); ponerFoco(lat, lon); }} />
+            )}
 
             {enCapasProbabilidad && verificacion && <NotificacionProbabilidad verificacion={verificacion} />}
 
-            {mostrarHistoricos && historicos.length > 0 && (
-              <MarcadoresHistoricos eventos={historicos} onUsarComoFoco={usarFocoHistorico} />
+            {CAPAS_HISTORICAS_HABILITADAS && mostrarHistoricos
+              && eventosHistoricos.length > 0 && (
+              <MarcadoresHistoricos eventos={eventosHistoricos} onUsarComoFoco={usarFocoHistorico} />
             )}
           </BaseMap>
         </div>
@@ -681,6 +812,65 @@ export default function Monitoreo() {
           </PanelDecisiones>
         )}
       </PanelDeslizable>
+
+      {/* --- Leyenda: focos satelitales frente a reportes de campo ---------
+          Van juntos a propósito. Son las dos fuentes del mapa y tienen
+          fiabilidad y significado distintos: una es un sensor, la otra una
+          persona. Se distinguen por FORMA, no solo por color, y llevan texto:
+          así se leen igual en claro, en oscuro y para quien no distinga bien
+          los colores. */}
+      {puedeVerReportes && (verReportes && reportes.length > 0 || focosActivos.length > 0) && (
+        <div className="rep-leyenda">
+          <span className="rep-leyenda-titulo">Origen del dato</span>
+          {focosActivos.length > 0 && (
+            <span className="rep-leyenda-fila">
+              <i className="rep-leyenda-circulo" />
+              Foco de calor satelital
+              <em>NASA FIRMS · detección automática</em>
+            </span>
+          )}
+          {verReportes && reportes.length > 0 && (
+            <>
+              <span className="rep-leyenda-fila">
+                <i className="rep-leyenda-pin" />
+                Reporte de brigadista
+                <em>observación en campo</em>
+              </span>
+              <span className="rep-leyenda-estados">
+                {Object.entries(ESTADO_REPORTE).map(([id, cfg]) => (
+                  <span key={id}>
+                    <i style={{ background: cfg.color }} />
+                    {cfg.texto}
+                  </span>
+                ))}
+              </span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* --- Panel de reporte del brigadista ------------------------------- */}
+      <ModalReporteIncendio
+        abierto={panelReporte}
+        onCerrar={() => { setPanelReporte(false); setEsperandoPunto(false); }}
+        punto={puntoReporte}
+        onPedirPunto={() => setEsperandoPunto(true)}
+        esperandoPunto={esperandoPunto}
+        onEnviado={() => {
+          setPanelReporte(false);
+          setEsperandoPunto(false);
+          setPuntoReporte(null);
+          cargarReportes();
+          setAvisoReporte("Reporte enviado. Queda pendiente de revisión.");
+          setTimeout(() => setAvisoReporte(null), 6000);
+        }} />
+
+      {avisoReporte && (
+        <div className="rep-confirmacion" role="status">
+          <Icono nombre="verificado" tam={16} />
+          {avisoReporte}
+        </div>
+      )}
 
       {informeVisor && (
         <VisorInforme html={informeVisor.html} nombre={informeVisor.nombre} onCerrar={() => setInformeVisor(null)} />

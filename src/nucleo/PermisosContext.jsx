@@ -47,12 +47,34 @@ const MATRIZ_RESPALDO = {
     generar_reportes: true, ver_monitoreo: false, ver_variables: false,
     ver_focos: false, consultar_probabilidad: false,
     ejecutar_simulacion: false, ver_simulaciones: false,
+    reportar_incendio: false, ver_reportes_campo: false,
   },
   analista: {
     ver_monitoreo: true, ver_variables: true, ver_focos: true,
     consultar_probabilidad: true, ejecutar_simulacion: true,
     ver_simulaciones: true, generar_reportes: true,
     gestionar_usuarios: false, configuracion: false, ver_bitacora: false,
+    // Consulta los reportes de campo, pero no los crea.
+    reportar_incendio: false, ver_reportes_campo: true,
+  },
+  ugr: {
+    ver_monitoreo: true, ver_variables: true, ver_focos: true,
+    consultar_probabilidad: true, ejecutar_simulacion: false,
+    ver_simulaciones: true, generar_reportes: true,
+    gestionar_usuarios: false, configuracion: false, ver_bitacora: false,
+    // Solo lectura: información de apoyo, sin editar ni modificar.
+    reportar_incendio: false, ver_reportes_campo: true,
+  },
+  // BRIGADISTA — solo Inicio y Monitoreo. Todo lo técnico y administrativo
+  // queda cerrado. Lo único que puede crear en el sistema es un reporte de
+  // campo. `ver_variables` y `ver_focos` se mantienen porque sin ellos el
+  // mapa de Monitoreo saldría vacío y no podría situar lo que ve en campo.
+  brigada: {
+    ver_monitoreo: true, ver_variables: true, ver_focos: true,
+    consultar_probabilidad: false, ejecutar_simulacion: false,
+    ver_simulaciones: false, generar_reportes: false,
+    gestionar_usuarios: false, configuracion: false, ver_bitacora: false,
+    reportar_incendio: true, ver_reportes_campo: true,
   },
 };
 

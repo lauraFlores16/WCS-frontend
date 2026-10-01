@@ -1,0 +1,552 @@
+/* =========================================================================
+   PESTAÑA VALIDACIÓN — validación externa del autómata celular
+   -------------------------------------------------------------------------
+   Ni un color literal: todo por tokens, así que los dos temas salen solos.
+   Las únicas excepciones son los cuatro colores de TP/FP/FN/TN, que son
+   semánticos y tienen que ser los mismos en claro y en oscuro para que la
+   leyenda del mapa y la del informe impreso coincidan.
+   ========================================================================= */
+
+/* --- Estado vacío ------------------------------------------------------- */
+.val-vacio {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 22px 16px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+}
+.val-vacio .icono { color: var(--acento-400); }
+.val-vacio h3 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.val-vacio p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.val-pasos {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+.val-pasos code,
+.val-vacio code {
+  font-family: var(--fuente-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+
+/* --- Panel -------------------------------------------------------------- */
+.val-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.val-seccion {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.val-titulo {
+  margin: 0;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+}
+
+.val-nota {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.val-ficha {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+}
+.val-ficha-cabecera {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.val-ficha-cabecera .icono { color: var(--acento-400); }
+
+.val-datos {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.val-datos > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.val-datos dt { font-size: 11.5px; color: var(--text-secondary); }
+.val-datos dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: right;
+}
+.val-datos dd.sube { color: var(--alerta-naranja); }
+.val-datos dd.baja { color: var(--info); }
+
+/* --- Selector de capa --------------------------------------------------- */
+.val-modos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+.val-modo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 11px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel-raised);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.val-modo:hover { background: var(--bg-panel-hover); border-color: var(--acento-500); }
+.val-modo.activo {
+  border-color: var(--acento-500);
+  border-width: 2px;
+  padding: 8px 10px;
+  background: var(--acento-tint);
+  color: var(--acento-400);
+  box-shadow: var(--acento-glow);
+}
+/* El check es un glifo, no solo color: la selección tiene que leerse sin
+   depender de distinguir el turquesa del gris. */
+.val-modo-marca {
+  width: 12px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--acento-400);
+}
+.val-modo .icono { color: var(--text-secondary); flex-shrink: 0; }
+.val-modo.activo .icono { color: var(--acento-400); }
+
+.val-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.val-segmentado {
+  display: flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.val-segmentado button {
+  flex: 1;
+  padding: 8px 6px;
+  border: none;
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.val-segmentado button + button { border-left: 1px solid var(--border-strong); }
+.val-segmentado button:hover { background: var(--bg-panel-hover); color: var(--text-primary); }
+.val-segmentado button.activo {
+  background: var(--acento-tint);
+  color: var(--acento-400);
+  box-shadow: inset 0 -2px 0 var(--acento-500);
+}
+
+/* --- Leyenda ------------------------------------------------------------
+   Lleva color, glifo Y texto. El §29 lo pide y además es lo correcto: quien
+   no distinga bien verde de naranja tiene que poder leerla igual. */
+.val-leyenda {
+  list-style: none;
+  margin: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.val-leyenda li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.val-leyenda i {
+  width: 11px;
+  height: 11px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.val-leyenda-glifo {
+  width: 12px;
+  text-align: center;
+  font-weight: 900;
+  color: var(--text-primary);
+  flex-shrink: 0;
+}
+.val-leyenda-texto { flex: 1; color: var(--text-primary); }
+.val-leyenda-clase {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.val-leyenda-nota {
+  font-size: 10.5px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  padding-top: 4px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* --- Métricas ----------------------------------------------------------- */
+.val-metricas {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+.val-metrica {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+}
+.val-metrica-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+.val-metrica-valor {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+/* La Accuracy va aparte y etiquetada: no es métrica principal y la pantalla
+   no debe dejar que se lea como si lo fuera. */
+.val-metrica--comp {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  border-style: dashed;
+}
+.val-metrica--comp .val-metrica-label { flex: 1; }
+.val-metrica--comp .val-metrica-valor { font-size: 14px; }
+.val-badge {
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-panel);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+
+.val-comportamiento {
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+.val-comportamiento.sobre {
+  background: var(--alerta-naranja-tint, color-mix(in srgb, #F59E0B 15%, transparent));
+  border: 1px solid #F59E0B;
+  color: var(--text-primary);
+}
+.val-comportamiento.sub {
+  background: color-mix(in srgb, #2563EB 15%, transparent);
+  border: 1px solid #2563EB;
+  color: var(--text-primary);
+}
+
+/* --- Matriz de confusión ------------------------------------------------ */
+.val-matriz {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 3px;
+  font-size: 11px;
+}
+.val-matriz th {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  text-align: left;
+  padding: 3px 4px;
+}
+.val-matriz thead th { text-align: center; }
+.val-matriz td {
+  padding: 10px 6px;
+  border-radius: var(--radius-sm);
+  text-align: center;
+  border: 1px solid var(--border-subtle);
+}
+.val-matriz td span {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.val-matriz td em {
+  display: block;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+/* Los cuatro colores semánticos, iguales en los dos temas para que coincidan
+   con el mapa y con el informe impreso. El tinte se mezcla con el fondo. */
+.val-matriz td.tp { background: color-mix(in srgb, #16A34A 18%, transparent); border-color: #16A34A; }
+.val-matriz td.fp { background: color-mix(in srgb, #F59E0B 18%, transparent); border-color: #F59E0B; }
+.val-matriz td.fn { background: color-mix(in srgb, #2563EB 18%, transparent); border-color: #2563EB; }
+.val-matriz td.tn { background: var(--bg-panel-raised); }
+
+/* --- Interpretación y avisos -------------------------------------------- */
+.val-interpretacion {
+  margin: 0;
+  padding: 11px 12px;
+  border-left: 3px solid var(--acento-500);
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  background: var(--bg-panel-raised);
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.val-advertencias {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.val-advertencias li {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--alerta-amarilla-tint);
+  border: 1px solid var(--alerta-amarilla);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+.val-advertencias .icono { flex-shrink: 0; margin-top: 1px; color: var(--alerta-amarilla); }
+
+.val-btn-informe {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* --- Chip de la barra del mapa ------------------------------------------ */
+.sim-chip-escenario.val-chip {
+  border-color: var(--info);
+  background: color-mix(in srgb, var(--info) 14%, transparent);
+  color: var(--info);
+}
+
+/* =========================================================================
+   AJUSTES POR TEMA
+   Sobre fondo blanco el turquesa claro no llega al contraste mínimo.
+   ========================================================================= */
+:root[data-tema="claro"] .val-modo.activo,
+:root[data-tema="claro"] .val-modo.activo .icono,
+:root[data-tema="claro"] .val-modo-marca,
+:root[data-tema="claro"] .val-segmentado button.activo,
+:root[data-tema="claro"] .val-ficha-cabecera .icono,
+:root[data-tema="claro"] .val-vacio .icono {
+  color: var(--acento-600);
+}
+:root[data-tema="claro"] .sim-chip-escenario.val-chip {
+  color: #1D4ED8;
+  border-color: #1D4ED8;
+}
+
+@media (max-width: 1200px) {
+  .val-metricas { grid-template-columns: 1fr; }
+}
+
+/* --- Aviso de datos de demostración -------------------------------------
+   Deliberadamente llamativo. Una captura de esta pantalla puede acabar en la
+   memoria sin que nadie recuerde de dónde salieron los números, así que el
+   aviso tiene que verse antes que las métricas. */
+.val-demo-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 2px solid var(--alerta-roja);
+  border-radius: var(--radius-md);
+  background: var(--alerta-roja-tint);
+}
+.val-demo-aviso .icono { flex-shrink: 0; margin-top: 1px; color: var(--alerta-roja); }
+.val-demo-aviso strong {
+  display: block;
+  font-size: 12.5px;
+  color: var(--alerta-roja);
+  letter-spacing: 0.02em;
+}
+.val-demo-aviso p {
+  margin: 3px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+/* --- Aviso de validación en curso ---------------------------------------
+   Datos reales pero incompletos. Va en azul de información, no en rojo: no
+   es un error, es un trabajo a medias. Distinto del aviso de datos de
+   demostración, que sí es rojo porque ahí los números no valen nada. */
+.val-parcial-aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--info);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--info) 10%, transparent);
+}
+.val-parcial-aviso .icono { flex-shrink: 0; margin-top: 1px; color: var(--info); }
+.val-parcial-aviso strong {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-primary);
+}
+.val-parcial-aviso p {
+  margin: 3px 0 7px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+.val-parcial-aviso ol {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 10.5px;
+  color: var(--text-secondary);
+}
+.val-parcial-aviso code {
+  font-family: var(--fuente-mono, ui-monospace, monospace);
+  font-size: 10px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+
+/* --- Reproductor de la propagación --------------------------------------- */
+.val-reproductor {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+.val-reproductor .btn { min-width: 38px; justify-content: center; }
+.val-slider { width: 100%; accent-color: var(--acento-500); }
+.val-reproductor-estado {
+  text-align: center;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+/* --- Tabla de sensibilidad ----------------------------------------------- */
+.val-sens { width: 100%; border-collapse: collapse; font-size: 11px; }
+.val-sens th {
+  padding: 4px 6px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-strong);
+  text-align: right;
+}
+.val-sens th:first-child { text-align: left; }
+.val-sens td {
+  padding: 4px 6px;
+  text-align: right;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.val-sens td:first-child { text-align: left; color: var(--text-primary); }
+/* La fila usada se marca con fondo Y con negrita: no solo color. */
+.val-sens tr.usado td {
+  background: var(--acento-tint);
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.val-sens tr.usado td:first-child::after {
+  content: " ← usado";
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--acento-400);
+}
+
+.val-panel select.input { width: 100%; }
+
+:root[data-tema="claro"] .val-sens tr.usado td:first-child::after {
+  color: var(--acento-600);
+}

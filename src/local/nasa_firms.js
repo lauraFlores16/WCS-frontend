@@ -1,17 +1,23 @@
-// Capa 3 — focos activos NASA FIRMS. Cliente del backend.
+// Dos fuentes de focos, dos funciones, dos capas.
 //
-// La MAP_KEY ya no está aquí. Antes vivía en nasa_firms_config.js, o sea, en el
-// bundle que descarga el navegador: cualquiera con las herramientas de
-// desarrollo abiertas la veía. Ahora está en backend/.env y no sale del
-// servidor. De paso desaparece el proxy /firms-api de vite.config.js: ya no hay
-// problema de CORS porque quien llama a NASA es el backend.
+// NASA FIRMS y la base histórica del proyecto no son intercambiables. Antes el
+// backend devolvía históricos cuando no había activos, y el mapa los pintaba
+// igual: un foco de 2019 aparecía como detección actual.
 import { pedir } from "./cliente";
 
 /**
- * @returns {Object} { focos, configurada, mensaje, procedencia }
- * `configurada` dice si el servidor tiene la clave puesta; el frontend lo usa
- * para explicar qué falta en vez de mostrar un error críptico.
+ * Focos activos de NASA FIRMS. NUNCA devuelve históricos.
+ * @returns {Object} { estado, focos, activos, periodo, mensaje, detalle, ... }
+ *   estado: "correcto" | "sin_focos" | "sin_clave" | "error"
  */
-export async function cargarFocosFirmsEnVivo() {
-  return pedir("/api/ambiente/firms");
+export async function cargarFocosFirmsEnVivo(zona = "apolo") {
+  return pedir(`/api/ambiente/firms?zona=${encodeURIComponent(zona)}`);
+}
+
+/** Focos históricos del proyecto. Fuente distinta, capa distinta. */
+export async function cargarFocosHistoricos(zona = "apolo", opciones = {}) {
+  const p = new URLSearchParams({ zona, limite: opciones.limite ?? 2000 });
+  if (opciones.desde) p.set("desde", opciones.desde);
+  if (opciones.hasta) p.set("hasta", opciones.hasta);
+  return pedir(`/api/ambiente/focos-historicos?${p}`);
 }

@@ -182,6 +182,19 @@ export const informesLocal = {
 // ---------------------------------------------------------------------------
 // Bitácora
 // ---------------------------------------------------------------------------
+/**
+ * Reportes de incendio enviados desde el terreno por los brigadistas.
+ *
+ * El control de acceso lo hace el SERVIDOR: `listar` exige
+ * `ver_reportes_campo` y `crear` exige `reportar_incendio`. Ocultar el botón
+ * en la interfaz es comodidad, no seguridad.
+ */
+export const reportesCampoLocal = {
+  listar: async () => ok(await pedir("/api/reportes-campo")),
+  crear: async (reporte) =>
+    ok(await pedir("/api/reportes-campo", { metodo: "POST", cuerpo: reporte })),
+};
+
 export const bitacoraLocal = {
   listar: async () => ok(await pedir("/api/bitacora")),
   registrar: (entrada) =>

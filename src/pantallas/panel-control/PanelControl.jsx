@@ -16,6 +16,7 @@ import { derivarParametros } from "../../local/parametros_auto";
 import { cargarDem, cargarTerrenoOsm, estadisticasDem } from "../../local/api_terreno";
 import { leerCalibracion } from "../../local/calibracion";
 import { simulacionLocal } from "../../local/api";
+import TarjetaValidacion from "./componentes/TarjetaValidacion";
 import "./estilos/PanelControl.css";
 
 export default function PanelControl() {
@@ -239,6 +240,11 @@ function Campo({ label, children, auto }) {
         {auto && <span className="panel-control-editado">editado</span>}
       </label>
       {children}
+      {/* Puerta de entrada a la validación externa. El análisis
+          completo vive en Simulación → Validación, que es donde
+          hay mapa: sin mapa no se puede leer dónde acertó. */}
+      <TarjetaValidacion />
+
     </div>
   );
 }

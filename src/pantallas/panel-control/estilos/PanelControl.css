@@ -91,3 +91,143 @@
   color: var(--text-muted);
   margin-top: 5px;
 }
+
+/* =========================================================================
+   APARTADO DE VALIDACIÓN EXTERNA
+   -------------------------------------------------------------------------
+   Va visualmente separado del formulario de escenarios a propósito: son dos
+   cosas que responden preguntas distintas y están una debajo de la otra.
+   El borde a la izquierda en color de información —no de acento— refuerza
+   que esto no es otro escenario más.
+   ========================================================================= */
+.pc-validacion {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--info);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pc-val-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pc-val-cabecera h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--text-primary);
+}
+.pc-val-cabecera h3 .icono { color: var(--info); }
+.pc-val-sub {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+.pc-val-demo {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--alerta-roja);
+  background: var(--alerta-roja-tint);
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--alerta-roja);
+}
+
+.pc-val-explica {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+.pc-val-explica strong { color: var(--text-primary); }
+
+.pc-val-cifras {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.pc-val-cifra {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 11px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+}
+.pc-val-cifra span {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+.pc-val-cifra strong {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.pc-val-datos {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 18px;
+}
+.pc-val-datos > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.pc-val-datos dt { font-size: 11.5px; color: var(--text-secondary); }
+.pc-val-datos dd {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: right;
+}
+
+.pc-val-vacio {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+.pc-val-vacio code {
+  font-family: var(--fuente-mono, ui-monospace, monospace);
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+
+.pc-val-btn { align-self: flex-start; }
+
+@media (max-width: 900px) {
+  .pc-val-cifras { grid-template-columns: repeat(2, 1fr); }
+  .pc-val-datos { grid-template-columns: 1fr; }
+}
+
+:root[data-tema="claro"] .pc-val-cabecera h3 .icono,
+:root[data-tema="claro"] .pc-validacion { border-left-color: #1D4ED8; }
+:root[data-tema="claro"] .pc-val-cabecera h3 .icono { color: #1D4ED8; }

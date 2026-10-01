@@ -469,3 +469,207 @@
 /* `.btn--mini` estaba duplicado aquí y en Monitoreo.css, «por si la pantalla
    no carga la otra hoja». Ahora vive en estilos/tokens.css, que main.jsx
    importa siempre: las dos copias sobraban y podían divergir. */
+
+/* =========================================================================
+   PANEL DE PELIGRO METEOROLÓGICO PROYECTADO
+   -------------------------------------------------------------------------
+   Va a ancho completo y antes de la rejilla: es lo primero que se quiere
+   saber al abrir la aplicación. Sin colores literales salvo los cuatro
+   niveles, que son semánticos y tienen que ser iguales en los dos temas.
+   ========================================================================= */
+.pph {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.pph-cabecera {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.pph-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--text-primary);
+}
+.pph-titulo .icono { color: var(--alerta-naranja); }
+.pph-sub {
+  margin: 3px 0 0;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.pph-horizontes {
+  display: flex;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.pph-horizontes button {
+  padding: 7px 14px;
+  border: none;
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pph-horizontes button + button { border-left: 1px solid var(--border-strong); }
+.pph-horizontes button:hover { background: var(--bg-panel-hover); color: var(--text-primary); }
+.pph-horizontes button.activo {
+  background: var(--acento-tint);
+  color: var(--acento-400);
+  box-shadow: inset 0 -2px 0 var(--acento-500);
+}
+
+.pph-resumen {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pph-ahora,
+.pph-pico {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-panel-raised);
+}
+.pph-resumen span {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+}
+.pph-resumen strong { font-size: 21px; font-weight: 700; line-height: 1.1; }
+.pph-resumen em {
+  font-style: normal;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.pph-grafica { margin: 0 -6px; }
+
+/* --- Tabla de las variables que componen el índice --------------------- */
+.pph-tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+.pph-tabla th {
+  padding: 5px 7px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-strong);
+  text-align: right;
+}
+.pph-tabla th:first-child { text-align: left; }
+.pph-tabla td {
+  padding: 5px 7px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  text-align: right;
+}
+.pph-tabla td:first-child { text-align: left; color: var(--text-primary); font-weight: 600; }
+.pph-tabla tr:last-child td { border-bottom: none; }
+/* Las filas críticas y altas se marcan con fondo Y con el punto de color de
+   la columna del índice: no depende solo del color de fondo. */
+.pph-tabla tr.critico td { background: var(--alerta-roja-tint); color: var(--text-primary); }
+.pph-tabla tr.alto td { background: var(--alerta-naranja-tint, color-mix(in srgb, #F59E0B 12%, transparent)); }
+
+.pph-celda-indice {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.pph-celda-indice i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pph-nota {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
+.pph-nota strong { color: var(--text-secondary); }
+.pph-nota--aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-panel-raised);
+  color: var(--text-secondary);
+}
+.pph-nota--aviso .icono { flex-shrink: 0; margin-top: 1px; color: var(--info); }
+
+.pph-cargando,
+.pph-vacio {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+.pph-vacio { display: block; line-height: 1.5; }
+
+@media (max-width: 760px) {
+  .pph-tabla th:nth-child(5),
+  .pph-tabla td:nth-child(5) { display: none; }
+}
+
+/* --- La tabla hora a hora, plegada -------------------------------------
+   Con 12 horas ocupaba más que el resto del panel junto. El detalle solo se
+   consulta cuando algo llama la atención en la gráfica, así que va cerrada
+   por defecto. */
+.pph-detalle > summary {
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--acento-400);
+  padding: 4px 0;
+  list-style: none;
+}
+.pph-detalle > summary::-webkit-details-marker { display: none; }
+.pph-detalle > summary::before {
+  content: "▸ ";
+  display: inline-block;
+  transition: transform 0.15s ease;
+}
+.pph-detalle[open] > summary::before { content: "▾ "; }
+.pph-detalle[open] > summary { margin-bottom: 4px; }
+
+.pph-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+.pph-nota .icono { flex-shrink: 0; margin-top: 1px; color: var(--info); }
+
+:root[data-tema="claro"] .pph-detalle > summary { color: var(--acento-600); }

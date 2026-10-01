@@ -27,7 +27,7 @@
   --bg-panel-raised: #23324a;
   --bg-panel-hover: #2b3b556e;
   --border-subtle: #334155;
-  --border-strong: #415571;
+  --border-strong: #6B82A3;   /* 3,7:1 sobre panel · antes #415571 daba 1,9:1 */
 
   --bg-sidebar: #0B2239;
   --bg-header: #12344D;
@@ -62,45 +62,65 @@
   --shadow-glow-acento: 0 4px 20px rgba(38, 166, 154, 0.28);
 }
 
-/* ===== TEMA CLARO ===== */
+/* ===== TEMA CLARO =====
+   El modo claro NO es «poner todo blanco». Antes lo era casi: --bg-panel y
+   --bg-panel-raised valían los dos #FFFFFF, así que todo lo que se dibuja
+   «elevado» sobre un panel —botones secundarios, tarjetas, el botón de cerrar
+   el panel, las cabeceras de tabla— quedaba blanco sobre blanco y solo se
+   distinguía por el borde. De ahí venían los controles que desaparecían.
+
+   La jerarquía ahora tiene seis escalones reales, de más hundido a más alto:
+
+     bg-void          #EDF3F8   fondo general (y fondo de los controles)
+     bg-panel-hover   #E2ECF6   estado hover / control activo
+     bg-panel-raised  #F4F8FC   tarjeta o panel secundario SOBRE el panel
+     bg-panel         #FFFFFF   panel principal
+     border-subtle    #D6E1EA   separación entre bloques
+     border-strong    #728CA5   contorno de un control (3:1, siempre visible)
+
+   El texto también sube de contraste: --text-secondary y --text-muted eran
+   #64748B y #94a3b8, y el segundo no llega al mínimo AA sobre blanco. */
 :root[data-tema="claro"] {
-  /* Superficies (Figma modo claro) */
-  --bg-void: #F5F9FC;
+  /* Superficies */
+  --bg-void: #EDF3F8;
   --bg-panel: #FFFFFF;
-  --bg-panel-raised: #FFFFFF;
-  --bg-panel-hover: #eef4fa;
-  --border-subtle: #D6E4F0;
-  --border-strong: #bcd2e8;
+  --bg-panel-raised: #F4F8FC;
+  --bg-panel-hover: #E2ECF6;
+  --border-subtle: #D6E1EA;
+  --border-strong: #728CA5;
 
   --bg-sidebar: #0F5E9C;
   --bg-header: #1565C0;
 
   /* Gradientes */
-  --gradiente-app: radial-gradient(1200px 800px at 15% -5%, #e6f0f9 0%, transparent 55%),
-                   radial-gradient(1000px 700px at 100% 0%, #e8f4f2 0%, transparent 50%),
-                   linear-gradient(160deg, #F5F9FC 0%, #eef4fa 100%);
-  --gradiente-panel: linear-gradient(158deg, #FFFFFF 0%, #fbfdff 100%);
-  --gradiente-marca: linear-gradient(135deg, #26A69A 0%, #1976D2 100%);
-  --gradiente-acento: linear-gradient(135deg, #26A69A 0%, #1d857b 100%);
+  --gradiente-app: radial-gradient(1200px 800px at 15% -5%, #dde9f5 0%, transparent 55%),
+                   radial-gradient(1000px 700px at 100% 0%, #dcefec 0%, transparent 50%),
+                   linear-gradient(160deg, #EFF4F9 0%, #E6EEF6 100%);
+  --gradiente-panel: linear-gradient(158deg, #FFFFFF 0%, #FAFCFE 100%);
+  --gradiente-marca: linear-gradient(135deg, #1a8f85 0%, #1565C0 100%);
+  --gradiente-acento: linear-gradient(135deg, #17847a 0%, #127067 100%);
 
   /* Texto */
   --text-primary: #1E293B;
-  --text-secondary: #64748B;
-  --text-muted: #94a3b8;
+  --text-secondary: #475569;
+  --text-muted: #64748B;
   --text-inverse: #FFFFFF;
 
-  --acento-500: #26A69A;
-  --acento-600: #1d857b;
-  --acento-400: #2bb3a6;
-  --acento-tint: #26A69A15;
-  --acento-glow: 0 0 0 3px rgba(38, 166, 154, 0.15);
+  /* Acento. --acento-400 es la variante que se usa SIEMPRE como color de
+     texto (pestaña activa, iconos del menú, cifras destacadas). En oscuro es
+     un turquesa claro; en claro tiene que ser el oscuro, o no se lee. */
+  --acento-500: #17897f;
+  --acento-600: #127067;
+  --acento-400: #0F7A70;
+  --acento-tint: #26A69A1a;
+  --acento-glow: 0 0 0 3px rgba(23, 137, 127, 0.22);
 
   --secundario-500: #1976D2;
   --secundario-600: #1565C0;
 
   --shadow-panel: 0 1px 2px rgba(30, 41, 59, 0.06), 0 6px 20px rgba(30, 41, 59, 0.08);
   --shadow-raised: 0 2px 8px rgba(30, 41, 59, 0.1), 0 12px 28px rgba(30, 41, 59, 0.1);
-  --shadow-glow-acento: 0 4px 16px rgba(38, 166, 154, 0.2);
+  --shadow-glow-acento: 0 4px 14px rgba(23, 137, 127, 0.24);
 }
 
 /* ===== TOKENS COMPARTIDOS (iguales en ambos temas) ===== */
@@ -326,7 +346,8 @@ a {
 }
 
 .input,
-.select {
+.select,
+textarea.input {
   width: 100%;
   padding: 9px 11px;
   border-radius: var(--radius-md);
@@ -336,10 +357,61 @@ a {
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .input:focus,
-.select:focus {
+.select:focus,
+textarea.input:focus {
   border-color: var(--acento-400);
   box-shadow: var(--acento-glow);
   outline: none;
+}
+
+/* El placeholder no puede heredar el color del texto: si lo hace, no se
+   distingue de un campo ya escrito. --text-muted es el escalón que le toca. */
+.input::placeholder,
+.select::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+/* Las opciones de un <select> las pinta el sistema operativo, no la hoja de
+   estilos del panel: sin esto, en Linux y en Windows con tema oscuro salen
+   negras sobre negro. */
+select option {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+}
+
+/* Controles nativos: que hereden el acento en vez del azul del navegador. */
+input[type="range"],
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--acento-500);
+}
+input[type="checkbox"],
+input[type="radio"] {
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+/* Autorrelleno de Chrome. Chrome ignora `background` y `color` en un campo
+   autorrellenado y le mete su propio amarillo/azul con texto negro: en modo
+   oscuro el campo se volvía ilegible y en claro el texto forzado a blanco del
+   login desaparecía. El único gancho que respeta es la sombra interior. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+select:-webkit-autofill {
+  -webkit-text-fill-color: var(--text-primary);
+  caret-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--bg-void) inset;
+  box-shadow: 0 0 0 1000px var(--bg-void) inset;
+  border: 1px solid var(--border-strong);
+  /* La transición larguísima es el truco estándar para que Chrome no repinte
+     su fondo al enfocar el campo. */
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 .field-label {
@@ -427,4 +499,122 @@ th {
   text-transform: uppercase;
   font-size: 11px;
   letter-spacing: 0.04em;
+}
+
+/* =========================================================================
+   AJUSTES ESPECÍFICOS DEL TEMA CLARO
+   -------------------------------------------------------------------------
+   Todo lo de aquí abajo está bajo :root[data-tema="claro"], así que el modo
+   oscuro no lo ve. Corrige los controles que en claro quedaban blancos sobre
+   blanco. No hay colores nuevos: se usan los escalones ya declarados arriba.
+   ========================================================================= */
+
+/* --- BOTÓN SECUNDARIO -----------------------------------------------------
+   El fondo era var(--bg-panel-raised) = #FFFFFF, o sea el mismo blanco que el
+   panel que lo contiene. Ahora tiene superficie propia y borde de verdad. */
+:root[data-tema="claro"] .btn {
+  background: var(--bg-panel-raised);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+:root[data-tema="claro"] .btn:hover {
+  background: var(--bg-panel-hover);
+  border-color: #5F7A96;
+}
+:root[data-tema="claro"] .btn:active {
+  background: #D8E4F0;
+  border-color: #5F7A96;
+  transform: translateY(0);
+}
+
+/* Botón primario: turquesa oscuro con texto blanco. El blanco AQUÍ sí se
+   queda —es blanco sobre turquesa, no sobre panel. */
+:root[data-tema="claro"] .btn--primary {
+  background: var(--gradiente-acento);
+  border-color: var(--acento-600);
+  color: #fff;
+}
+:root[data-tema="claro"] .btn--primary:hover {
+  filter: none;
+  background: linear-gradient(135deg, #127067 0%, #0e5d55 100%);
+  border-color: #0e5d55;
+}
+
+/* Deshabilitado: `opacity: .5` sobre blanco deja el botón casi invisible.
+   Mejor una superficie apagada pero con contorno, que se ve que está ahí. */
+:root[data-tema="claro"] .btn:disabled,
+:root[data-tema="claro"] .btn--primary:disabled {
+  opacity: 1;
+  background: #E8EEF4;
+  border-color: var(--border-subtle);
+  color: #8A9AAC;
+  box-shadow: none;
+  filter: none;
+}
+
+/* Botón de icono: sin fondo propio desaparecía del todo. */
+:root[data-tema="claro"] .btn--icono {
+  background: var(--bg-panel-raised);
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+}
+:root[data-tema="claro"] .btn--icono:hover {
+  background: var(--bg-panel-hover);
+  color: var(--text-primary);
+}
+
+/* --- CAMPOS ---------------------------------------------------------------
+   El fondo del campo es --bg-void (#EDF3F8): hundido respecto del panel
+   blanco, que es como se lee que ahí se escribe. */
+:root[data-tema="claro"] .input,
+:root[data-tema="claro"] .select,
+:root[data-tema="claro"] textarea.input {
+  background: var(--bg-void);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+:root[data-tema="claro"] .input:hover,
+:root[data-tema="claro"] .select:hover {
+  border-color: #5F7A96;
+}
+
+/* --- PESTAÑAS DEL PANEL DERECHO ------------------------------------------
+   La inactiva era --text-muted sobre blanco. Ahora la activa lleva las tres
+   señales a la vez: color, peso y barra inferior —el color solo nunca debe
+   ser la única pista. */
+:root[data-tema="claro"] .panel-pestana-btn {
+  color: var(--text-secondary);
+}
+:root[data-tema="claro"] .panel-pestana-btn.activa {
+  color: var(--acento-600);
+  background: var(--acento-tint);
+  border-bottom-color: var(--acento-500);
+  font-weight: 700;
+}
+
+/* --- CONTROLES DEL MAPA (Leaflet) ----------------------------------------
+   Leaflet los pinta con su hoja de estilos propia. Se les da la superficie
+   del sistema para que no floten como cajas blancas sin borde sobre una
+   ortofoto clara. */
+.leaflet-bar a,
+.leaflet-bar a:hover,
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  background: var(--bg-panel);
+  color: var(--text-primary);
+  border-bottom-color: var(--border-subtle);
+}
+.leaflet-bar a:hover {
+  background: var(--bg-panel-hover);
+}
+.leaflet-bar {
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-panel);
+}
+.leaflet-control-attribution {
+  background: color-mix(in srgb, var(--bg-panel) 88%, transparent) !important;
+  color: var(--text-secondary) !important;
+}
+.leaflet-control-attribution a {
+  color: var(--acento-600) !important;
 }

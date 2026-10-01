@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verificar": "node scripts/comprobar_orden_hooks.mjs src && oxlint src",
+    "probar": "vite-node scripts/probar_pantallas.mjs && vite-node scripts/comprobar_menu_por_rol.mjs && vite-node scripts/pruebas_usabilidad.mjs && vite-node scripts/probar_capas_mapa.mjs"
   },
   "dependencies": {
     "axios": "^1.18.1",
